@@ -1,41 +1,20 @@
 # tokenary
 
-Minimal Python library to:
+Minimal Python library to calculate LLM API costs based on the LiteLLM model catalog.
 
-- generate typed pricing data from the LiteLLM model catalog
-- expose a user-facing API for usage/session cost calculation
-
-## Generate pricing artifacts
-
-Run the generator module (tokenary):
+## Installation
 
 ```bash
-uv run python -m tokenary.generator
+pip install tokenary
 ```
 
-By default this writes:
+## Usage
 
-- `data/model_prices.generated.json`
-- `tokenary/_generated.py`
-
-The generated Python module contains:
-
-- `ModelName` as `StrEnum`
-- one `GeneratedModelPricing(...)` object per model
-- lookup mappings like `MODEL_PRICINGS` and `MODEL_PRICINGS_BY_NAME`
-
-Custom outputs:
-
-```bash
-uv run python -m tokenary.generator --json-output data/model_prices.generated.json --python-output tokenary/_generated.py
-```
-
-## Python usage
+### Functional API
 
 ```python
-from tokenary import ModelName, Tokenary
-
-tokenary = Tokenary()
+import tokenary
+from tokenary import ModelName
 
 result = tokenary.calculate(
     model=ModelName.AZURE_GPT_3_5_TURBO,
@@ -43,19 +22,63 @@ result = tokenary.calculate(
     output_tokens=500,
 )
 
+print(result.total_cost)
 print(result.model_dump())
 ```
 
-Functional API (without keeping class state):
+### Request object
+
+```python
+from tokenary import ModelName, UsageCostRequest, calculate
+
+request = UsageCostRequest(
+    model=ModelName.AZURE_GPT_3_5_TURBO,
+    input_tokens=2000,
+    output_tokens=800,
+    reasoning_tokens=200,
+)
+
+result = calculate(request)
+print(result.model_dump())
+```
+
+### Multimodal / extended usage
 
 ```python
 from tokenary import ModelName, calculate
 
 result = calculate(
-    model=ModelName.AZURE_GPT_3_5_TURBO,
-    input_tokens=1000,
-    output_tokens=500,
+    model=ModelName.GPT_4O,
+    input_tokens=500,
+    output_tokens=200,
+    generated_images=2,
+    code_interpreter_sessions=1,
 )
 
-print(result.total_cost)
+print(f"Total: ${result.total_cost:.6f}")
+```
+
+### All supported parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `model` | `ModelName` | Model identifier |
+| `input_tokens` | `int` | Number of input tokens |
+| `output_tokens` | `int` | Number of output tokens |
+| `reasoning_tokens` | `int` | Reasoning tokens (e.g. o1) |
+| `audio_input_tokens` | `int` | Audio input tokens |
+| `generated_images` | `int` | Number of generated images |
+| `code_interpreter_sessions` | `int` | Code interpreter sessions |
+| `file_search_calls` | `int` | File search API calls |
+| `file_search_gb_days` | `float` | File search storage (GB-days) |
+| `vector_store_gb_days` | `float` | Vector store storage (GB-days) |
+
+The returned `CostBreakdown` object contains per-category costs (`input_cost`, `output_cost`, `reasoning_cost`, …) and a `total_cost`, all in USD.
+
+## Generate pricing artifacts
+
+Re-generate the bundled pricing data from the LiteLLM catalog:
+
+```bash
+python -m tokenary.generator
 ```
