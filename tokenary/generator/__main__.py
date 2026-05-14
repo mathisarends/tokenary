@@ -1,4 +1,5 @@
 import logging
+import subprocess
 
 from .downloader import fetch_model_prices_raw, write_raw_prices_file
 from .generator import write_python_catalog_file
@@ -19,8 +20,12 @@ def main() -> None:
     write_raw_prices_file(raw_prices, _JSON_OUTPUT)
     logger.info(f"✓ Saved JSON: {_JSON_OUTPUT}")
 
-    write_python_catalog_file(raw_prices, _PYTHON_OUTPUT)
+    python_path = write_python_catalog_file(raw_prices, _PYTHON_OUTPUT)
     logger.info(f"✓ Generated Python: {_PYTHON_OUTPUT}")
+
+    subprocess.run(["ruff", "check", "--fix", str(python_path)])
+    subprocess.run(["ruff", "format", str(python_path)], check=True)
+    logger.info(f"✓ Linted: {_PYTHON_OUTPUT}")
 
     logger.info("\n✅ Generation complete!")
 
