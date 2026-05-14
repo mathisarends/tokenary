@@ -42,36 +42,36 @@ result = calculate(request)
 print(result.model_dump())
 ```
 
-### Multimodal / extended usage
+### Reasoning tokens (e.g. o1)
 
 ```python
 from tokenary import ModelName, calculate
 
 result = calculate(
-    model=ModelName.GPT_4O,
+    model=ModelName.O1,
     input_tokens=500,
     output_tokens=200,
-    generated_images=2,
-    code_interpreter_sessions=1,
+    reasoning_tokens=300,
 )
 
 print(f"Total: ${result.total_cost:.6f}")
+print(f"  Reasoning: ${result.reasoning_cost:.6f}")
 ```
 
 ### All supported parameters
 
-| Parameter | Type | Description |
-|---|---|---|
-| `model` | `ModelName` | Model identifier |
-| `input_tokens` | `int` | Number of input tokens |
-| `output_tokens` | `int` | Number of output tokens |
-| `reasoning_tokens` | `int` | Reasoning tokens (e.g. o1) |
-| `audio_input_tokens` | `int` | Audio input tokens |
-| `generated_images` | `int` | Number of generated images |
-| `code_interpreter_sessions` | `int` | Code interpreter sessions |
-| `file_search_calls` | `int` | File search API calls |
-| `file_search_gb_days` | `float` | File search storage (GB-days) |
-| `vector_store_gb_days` | `float` | Vector store storage (GB-days) |
+| Parameter                   | Type        | Description                    |
+| --------------------------- | ----------- | ------------------------------ |
+| `model`                     | `ModelName` | Model identifier               |
+| `input_tokens`              | `int`       | Number of input tokens         |
+| `output_tokens`             | `int`       | Number of output tokens        |
+| `reasoning_tokens`          | `int`       | Reasoning tokens (e.g. o1)     |
+| `audio_input_tokens`        | `int`       | Audio input tokens             |
+| `generated_images`          | `int`       | Number of generated images     |
+| `code_interpreter_sessions` | `int`       | Code interpreter sessions      |
+| `file_search_calls`         | `int`       | File search API calls          |
+| `file_search_gb_days`       | `float`     | File search storage (GB-days)  |
+| `vector_store_gb_days`      | `float`     | Vector store storage (GB-days) |
 
 The returned `CostBreakdown` object contains per-category costs (`input_cost`, `output_cost`, `reasoning_cost`, …) and a `total_cost`, all in USD.
 

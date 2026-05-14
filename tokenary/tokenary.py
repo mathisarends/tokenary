@@ -82,9 +82,10 @@ def calculate(
 
     input_cost = request.input_tokens * (pricing.input_cost_per_token or 0.0)
     output_cost = request.output_tokens * (pricing.output_cost_per_token or 0.0)
-    reasoning_cost = request.reasoning_tokens * (
-        pricing.output_cost_per_reasoning_token or 0.0
+    reasoning_token_rate = (
+        pricing.output_cost_per_reasoning_token or pricing.output_cost_per_token or 0.0
     )
+    reasoning_cost = request.reasoning_tokens * reasoning_token_rate
     audio_input_cost = request.audio_input_tokens * (
         pricing.input_cost_per_audio_token or 0.0
     )
