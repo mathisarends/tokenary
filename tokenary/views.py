@@ -1,6 +1,5 @@
-from typing import Any, Self
-
 from pydantic import BaseModel, ConfigDict
+from tokenary._generated import ModelName
 
 
 class SearchContextCost(BaseModel):
@@ -37,25 +36,9 @@ class PricingCatalog(BaseModel):
     sample_spec: ModelPricing | None = None
     models: dict[str, ModelPricing]
 
-    @classmethod
-    def from_raw(cls, raw: dict[str, Any]) -> Self:
-        sample_raw = raw.get("sample_spec")
-        models = {k: v for k, v in raw.items() if k != "sample_spec"}
-
-        return cls(
-            sample_spec=ModelPricing.model_validate(sample_raw)
-            if isinstance(sample_raw, dict)
-            else None,
-            models={
-                name: ModelPricing.model_validate(data)
-                for name, data in models.items()
-                if isinstance(data, dict)
-            },
-        )
-
 
 class UsageCostRequest(BaseModel):
-    model: str
+    model: ModelName
 
     input_tokens: int = 0
     output_tokens: int = 0
@@ -85,7 +68,3 @@ class CostBreakdown(BaseModel):
     vector_store_cost: float = 0.0
 
     total_cost: float = 0.0
-
-
-class CostResponse(CostBreakdown):
-    pass

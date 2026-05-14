@@ -1,56 +1,103 @@
-from __future__ import annotations
+from functools import lru_cache
+from typing import overload
 
-import json
-from pathlib import Path
-
-from . import _generated
-from .views import CostBreakdown, CostResponse, PricingCatalog, UsageCostRequest
-
-
-def load_catalog(path: str | Path) -> PricingCatalog:
-    raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    if not isinstance(raw, dict):
-        raise ValueError("Catalog file is not a JSON object")
-    return PricingCatalog.from_raw(raw)
+from tokenary._generated import MODEL_PRICINGS_BY_NAME, SAMPLE_SPEC
+from tokenary.views import (
+    CostBreakdown,
+    ModelPricing,
+    PricingCatalog,
+    UsageCostRequest,
+)
 
 
-def load_embedded_catalog() -> PricingCatalog:
-    raw = getattr(_generated, "MODEL_PRICES_RAW", None)
-    if not isinstance(raw, dict) or not raw:
-        raise ValueError(
-            "No generated pricing data found in tokenary/_generated.py. "
-            "Run `python -m tokenary.generator` or `python -m cdpify.generator`."
-        )
-    return PricingCatalog.from_raw(raw)
+@lru_cache(maxsize=1)
+def _get_catalog() -> PricingCatalog:
+    return PricingCatalog(
+        sample_spec=ModelPricing.model_validate(SAMPLE_SPEC.model_dump())
+        if SAMPLE_SPEC
+        else None,
+        models={
+            name: ModelPricing.model_validate(pricing.model_dump())
+            for name, pricing in MODEL_PRICINGS_BY_NAME.items()
+        },
+    )
 
 
-def calculate_usage_cost(
-    catalog: PricingCatalog, usage: UsageCostRequest
+@overload
+def calculate(request: UsageCostRequest) -> CostBreakdown: ...
+
+
+@overload
+def calculate(
+    request: None = None,
+    *,
+    model: str,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    reasoning_tokens: int = 0,
+    audio_input_tokens: int = 0,
+    generated_images: int = 0,
+    code_interpreter_sessions: int = 0,
+    file_search_calls: int = 0,
+    file_search_gb_days: float = 0.0,
+    vector_store_gb_days: float = 0.0,
+) -> CostBreakdown: ...
+
+
+def calculate(
+    request: UsageCostRequest | None = None,
+    *,
+    model: str | None = None,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    reasoning_tokens: int = 0,
+    audio_input_tokens: int = 0,
+    generated_images: int = 0,
+    code_interpreter_sessions: int = 0,
+    file_search_calls: int = 0,
+    file_search_gb_days: float = 0.0,
+    vector_store_gb_days: float = 0.0,
 ) -> CostBreakdown:
-    pricing = catalog.models.get(usage.model)
-    if pricing is None:
-        raise KeyError(f"Unknown model: {usage.model}")
+    if request is None:
+        if model is None:
+            raise ValueError("Either request or model must be provided")
+        request = UsageCostRequest(
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            reasoning_tokens=reasoning_tokens,
+            audio_input_tokens=audio_input_tokens,
+            generated_images=generated_images,
+            code_interpreter_sessions=code_interpreter_sessions,
+            file_search_calls=file_search_calls,
+            file_search_gb_days=file_search_gb_days,
+            vector_store_gb_days=vector_store_gb_days,
+        )
 
-    input_cost = usage.input_tokens * (pricing.input_cost_per_token or 0.0)
-    output_cost = usage.output_tokens * (pricing.output_cost_per_token or 0.0)
-    reasoning_cost = usage.reasoning_tokens * (
+    catalog = _get_catalog()
+    pricing = catalog.models.get(request.model)
+    if pricing is None:
+        raise KeyError(f"Unknown model: {request.model!r}")
+
+    input_cost = request.input_tokens * (pricing.input_cost_per_token or 0.0)
+    output_cost = request.output_tokens * (pricing.output_cost_per_token or 0.0)
+    reasoning_cost = request.reasoning_tokens * (
         pricing.output_cost_per_reasoning_token or 0.0
     )
-    audio_input_cost = usage.audio_input_tokens * (
+    audio_input_cost = request.audio_input_tokens * (
         pricing.input_cost_per_audio_token or 0.0
     )
-
-    image_cost = usage.generated_images * (pricing.output_cost_per_image or 0.0)
-    code_interpreter_cost = usage.code_interpreter_sessions * (
+    image_cost = request.generated_images * (pricing.output_cost_per_image or 0.0)
+    code_interpreter_cost = request.code_interpreter_sessions * (
         pricing.code_interpreter_cost_per_session or 0.0
     )
-    file_search_call_cost = usage.file_search_calls * (
+    file_search_call_cost = request.file_search_calls * (
         (pricing.file_search_cost_per_1k_calls or 0.0) / 1000.0
     )
-    file_search_storage_cost = usage.file_search_gb_days * (
+    file_search_storage_cost = request.file_search_gb_days * (
         pricing.file_search_cost_per_gb_per_day or 0.0
     )
-    vector_store_cost = usage.vector_store_gb_days * (
+    vector_store_cost = request.vector_store_gb_days * (
         pricing.vector_store_cost_per_gb_per_day or 0.0
     )
 
@@ -67,7 +114,7 @@ def calculate_usage_cost(
     )
 
     return CostBreakdown(
-        model=usage.model,
+        model=request.model,
         input_cost=input_cost,
         output_cost=output_cost,
         reasoning_cost=reasoning_cost,
@@ -79,37 +126,3 @@ def calculate_usage_cost(
         vector_store_cost=vector_store_cost,
         total_cost=total_cost,
     )
-
-
-class Tokenary:
-    def __init__(
-        self,
-        catalog: PricingCatalog | None = None,
-        catalog_path: str | Path | None = None,
-    ):
-        if catalog is not None and catalog_path is not None:
-            raise ValueError("Pass either catalog or catalog_path, not both")
-
-        if catalog is not None:
-            self.catalog = catalog
-        elif catalog_path is not None:
-            self.catalog = load_catalog(catalog_path)
-        else:
-            self.catalog = load_embedded_catalog()
-
-    def calculate(
-        self, request: UsageCostRequest | dict | None = None, **kwargs
-    ) -> CostResponse:
-        if isinstance(request, UsageCostRequest):
-            usage = request
-        else:
-            payload: dict[str, object] = {}
-            if isinstance(request, dict):
-                payload.update(request)
-            payload.update(kwargs)
-            if "model" in payload and payload["model"] is not None:
-                payload["model"] = str(payload["model"])
-            usage = UsageCostRequest(**payload)
-
-        breakdown = calculate_usage_cost(self.catalog, usage)
-        return CostResponse(**breakdown.model_dump())

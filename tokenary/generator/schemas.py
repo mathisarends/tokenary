@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-from typing import Any, Self
-
 from pydantic import BaseModel, ConfigDict
 
 
@@ -43,24 +39,3 @@ class GeneratedModelPricing(BaseModel):
     supports_system_messages: bool | None = None
     supports_tool_choice: bool | None = None
     supports_vision: bool | None = None
-
-
-class GeneratedPricingCatalog(BaseModel):
-    sample_spec: GeneratedModelPricing | None = None
-    models: dict[str, GeneratedModelPricing]
-
-    @classmethod
-    def from_raw(cls, raw: dict[str, Any]) -> Self:
-        sample_raw = raw.get("sample_spec")
-        models = {k: v for k, v in raw.items() if k != "sample_spec"}
-
-        return cls(
-            sample_spec=GeneratedModelPricing.model_validate(sample_raw)
-            if isinstance(sample_raw, dict)
-            else None,
-            models={
-                name: GeneratedModelPricing.model_validate(data)
-                for name, data in models.items()
-                if isinstance(data, dict)
-            },
-        )

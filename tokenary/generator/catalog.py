@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import keyword
 from pathlib import Path
 from pprint import pformat
 import re
@@ -47,62 +48,58 @@ def _pricing_var_name(enum_name: str) -> str:
     return f"PRICING_{enum_name}"
 
 
+def _render_python_value(value: object, indent: int = 0) -> str:
+    rendered = pformat(value, sort_dicts=True, width=100)
+    if indent > 0 and "\n" in rendered:
+        rendered = rendered.replace("\n", f"\n{' ' * indent}")
+    return rendered
+
+
+def _is_valid_kwarg_name(name: str) -> bool:
+    return name.isidentifier() and not keyword.iskeyword(name)
+
+
+def _append_pricing_constructor(
+    lines: list[str],
+    var_name: str,
+    model_data: dict[str, object],
+    annotation: str = "GeneratedModelPricing",
+) -> None:
+    lines.append(f"{var_name}: Final[{annotation}] = GeneratedModelPricing(")
+
+    regular_kwargs: list[tuple[str, object]] = []
+    extra_kwargs: dict[str, object] = {}
+
+    for key in sorted(model_data.keys()):
+        value = model_data[key]
+        if _is_valid_kwarg_name(key):
+            regular_kwargs.append((key, value))
+        else:
+            extra_kwargs[key] = value
+
+    for key, value in regular_kwargs:
+        lines.append(f"    {key}={_render_python_value(value, indent=8)},")
+
+    if extra_kwargs:
+        lines.append(f"    **{_render_python_value(extra_kwargs, indent=8)},")
+
+    lines.append(")")
+
+
 def render_python_catalog(raw_prices: dict[str, object]) -> str:
     lines: list[str] = [
-        "from __future__ import annotations",
-        "",
         "from enum import StrEnum",
         "from typing import Final",
         "",
-        "from pydantic import BaseModel, ConfigDict",
-        "",
-        "",
-        "class GeneratedModelPricing(BaseModel):",
-        '    model_config = ConfigDict(extra="allow")',
-        "",
-        "    litellm_provider: str | None = None",
-        "    mode: str | None = None",
-        "",
-        "    input_cost_per_token: float | None = None",
-        "    output_cost_per_token: float | None = None",
-        "    output_cost_per_reasoning_token: float | None = None",
-        "    cache_read_input_token_cost: float | None = None",
-        "",
-        "    input_cost_per_audio_token: float | None = None",
-        "    output_cost_per_image: float | None = None",
-        "    file_search_cost_per_1k_calls: float | None = None",
-        "    file_search_cost_per_gb_per_day: float | None = None",
-        "    vector_store_cost_per_gb_per_day: float | None = None",
-        "    code_interpreter_cost_per_session: float | None = None",
-        "",
-        "    max_input_tokens: int | str | None = None",
-        "    max_output_tokens: int | str | None = None",
-        "    max_tokens: int | str | None = None",
-        "",
-        "    deprecation_date: str | None = None",
-        "",
-        "    supported_endpoints: list[str] | None = None",
-        "    supported_modalities: list[str] | None = None",
-        "    supported_output_modalities: list[str] | None = None",
-        "",
-        "    supports_function_calling: bool | None = None",
-        "    supports_native_streaming: bool | None = None",
-        "    supports_parallel_function_calling: bool | None = None",
-        "    supports_pdf_input: bool | None = None",
-        "    supports_prompt_caching: bool | None = None",
-        "    supports_reasoning: bool | None = None",
-        "    supports_response_schema: bool | None = None",
-        "    supports_system_messages: bool | None = None",
-        "    supports_tool_choice: bool | None = None",
-        "    supports_vision: bool | None = None",
-        "",
-        f"MODEL_PRICES_RAW: dict[str, object] = {pformat(raw_prices, sort_dicts=True, width=120)}",
+        "from tokenary.generator.schemas import GeneratedModelPricing",
         "",
         "",
         "class ModelName(StrEnum):",
     ]
 
-    model_keys = sorted(k for k in raw_prices.keys() if k != "sample_spec")
+    model_keys = sorted(
+        k for k, v in raw_prices.items() if k != "sample_spec" and isinstance(v, dict)
+    )
     members: list[tuple[str, str, str]] = []
 
     if not model_keys:
@@ -114,14 +111,21 @@ def render_python_catalog(raw_prices: dict[str, object]) -> str:
             lines.append(f"    {enum_name} = {model_name!r}")
             members.append((model_name, enum_name, _pricing_var_name(enum_name)))
 
+    lines.append("")
+
+    sample_spec = raw_prices.get("sample_spec")
+    if isinstance(sample_spec, dict):
+        _append_pricing_constructor(
+            lines=lines,
+            var_name="SAMPLE_SPEC",
+            model_data=sample_spec,
+            annotation="GeneratedModelPricing | None",
+        )
+    else:
+        lines.append("SAMPLE_SPEC: Final[GeneratedModelPricing | None] = None")
+
     lines.extend(
         [
-            "",
-            "SAMPLE_SPEC: Final[GeneratedModelPricing | None] = (",
-            '    GeneratedModelPricing.model_validate(MODEL_PRICES_RAW["sample_spec"])',
-            '    if isinstance(MODEL_PRICES_RAW.get("sample_spec"), dict)',
-            "    else None",
-            ")",
             "",
             "MODEL_NAMES: tuple[str, ...] = tuple(model.value for model in ModelName)",
             "",
@@ -129,9 +133,13 @@ def render_python_catalog(raw_prices: dict[str, object]) -> str:
     )
 
     for model_name, _enum_name, pricing_var in members:
-        lines.append(
-            f"{pricing_var}: Final[GeneratedModelPricing] = GeneratedModelPricing.model_validate(MODEL_PRICES_RAW[{model_name!r}])"
-        )
+        model_data = raw_prices[model_name]
+        if isinstance(model_data, dict):
+            _append_pricing_constructor(
+                lines=lines,
+                var_name=pricing_var,
+                model_data=model_data,
+            )
 
     if members:
         lines.extend(["", "MODEL_PRICINGS: dict[ModelName, GeneratedModelPricing] = {"])

@@ -13,16 +13,16 @@ Run the generator module (tokenary):
 uv run python -m tokenary.generator
 ```
 
-Alias also supported:
-
-```bash
-uv run python -m cdpify.generator
-```
-
 By default this writes:
 
 - `data/model_prices.generated.json`
 - `tokenary/_generated.py`
+
+The generated Python module contains:
+
+- `ModelName` as `StrEnum`
+- one `GeneratedModelPricing(...)` object per model
+- lookup mappings like `MODEL_PRICINGS` and `MODEL_PRICINGS_BY_NAME`
 
 Custom outputs:
 
@@ -44,4 +44,18 @@ result = tokenary.calculate(
 )
 
 print(result.model_dump())
+```
+
+Functional API (without keeping class state):
+
+```python
+from tokenary import ModelName, calculate
+
+result = calculate(
+    model=ModelName.AZURE_GPT_3_5_TURBO,
+    input_tokens=1000,
+    output_tokens=500,
+)
+
+print(result.total_cost)
 ```
