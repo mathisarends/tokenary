@@ -1,8 +1,7 @@
-
 import json
 import pytest
 
-from tokenary.downloader import fetch_model_prices_raw, write_raw_prices_file
+from tokenary.generator.downloader import fetch_model_prices_raw, write_raw_prices_file
 
 
 class _FakeResponse:
@@ -27,17 +26,19 @@ def test_fetch_model_prices_raw_success(monkeypatch: pytest.MonkeyPatch) -> None
         assert request.full_url == "https://example.test/prices.json"
         return _FakeResponse(payload)
 
-    monkeypatch.setattr("tokenary.downloader.urlopen", fake_urlopen)
+    monkeypatch.setattr("tokenary.generator.downloader.urlopen", fake_urlopen)
 
     result = fetch_model_prices_raw(url="https://example.test/prices.json")
     assert result["my-model"]["mode"] == "chat"
 
 
-def test_fetch_model_prices_raw_rejects_non_object(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_fetch_model_prices_raw_rejects_non_object(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def fake_urlopen(request, timeout=30):
         return _FakeResponse("[]")
 
-    monkeypatch.setattr("tokenary.downloader.urlopen", fake_urlopen)
+    monkeypatch.setattr("tokenary.generator.downloader.urlopen", fake_urlopen)
 
     with pytest.raises(ValueError, match="not a JSON object"):
         fetch_model_prices_raw(url="https://example.test/prices.json")

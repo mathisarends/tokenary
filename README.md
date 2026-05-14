@@ -2,38 +2,46 @@
 
 Minimal Python library to:
 
-- download the LiteLLM model price catalog
-- generate a local JSON file with the current model prices
-- calculate structured usage/session costs per model
+- generate typed pricing data from the LiteLLM model catalog
+- expose a user-facing API for usage/session cost calculation
 
-## Generate catalog file
+## Generate pricing artifacts
 
-After installation you can run:
+Run the generator module (tokenary):
 
 ```bash
-tokenary-generate -o data/model_prices.generated.json
+uv run python -m tokenary.generator
 ```
 
-Optional custom URL:
+Alias also supported:
 
 ```bash
-tokenary-generate --url https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json -o data/model_prices.generated.json
+uv run python -m cdpify.generator
+```
+
+By default this writes:
+
+- `data/model_prices.generated.json`
+- `tokenary/_generated.py`
+
+Custom outputs:
+
+```bash
+uv run python -m tokenary.generator --json-output data/model_prices.generated.json --python-output tokenary/_generated.py
 ```
 
 ## Python usage
 
 ```python
-from tokenary import load_catalog, UsageCostRequest, calculate_usage_cost
+from tokenary import ModelName, Tokenary
 
-catalog = load_catalog("data/model_prices.generated.json")
+tokenary = Tokenary()
 
-request = UsageCostRequest(
-	model="amazon.nova-lite-v1:0",
-	input_tokens=1000,
-	output_tokens=500,
-	code_interpreter_sessions=1,
+result = tokenary.calculate(
+    model=ModelName.AZURE_GPT_3_5_TURBO,
+    input_tokens=1000,
+    output_tokens=500,
 )
 
-cost = calculate_usage_cost(catalog, request)
-print(cost.model_dump())
+print(result.model_dump())
 ```
