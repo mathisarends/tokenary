@@ -2,11 +2,11 @@ import json
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-DEFAULT_PRICE_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
+_DEFAULT_PRICE_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 
 
 def fetch_model_prices_raw(
-    url: str = DEFAULT_PRICE_URL, timeout_seconds: int = 30
+    url: str = _DEFAULT_PRICE_URL, timeout_seconds: int = 30
 ) -> dict[str, object]:
     request = Request(url=url, headers={"User-Agent": "tokenary/0.1.0"})
     with urlopen(request, timeout=timeout_seconds) as response:

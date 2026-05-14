@@ -12,15 +12,16 @@ from tokenary.views import (
 
 @lru_cache(maxsize=1)
 def _get_catalog() -> PricingCatalog:
-    return PricingCatalog(
-        sample_spec=ModelPricing.model_validate(SAMPLE_SPEC.model_dump())
-        if SAMPLE_SPEC
-        else None,
-        models={
-            name: ModelPricing.model_validate(pricing.model_dump())
-            for name, pricing in MODEL_PRICINGS_BY_NAME.items()
-        },
+    models = {
+        name: ModelPricing.model_validate(pricing.model_dump())
+        for name, pricing in MODEL_PRICINGS_BY_NAME.items()
+    }
+
+    sample_spec = (
+        ModelPricing.model_validate(SAMPLE_SPEC.model_dump()) if SAMPLE_SPEC else None
     )
+
+    return PricingCatalog(sample_spec=sample_spec, models=models)
 
 
 @overload

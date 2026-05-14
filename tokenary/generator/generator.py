@@ -1,30 +1,7 @@
-from __future__ import annotations
-
 import keyword
+import re
 from pathlib import Path
 from pprint import pformat
-import re
-
-from .downloader import DEFAULT_PRICE_URL, fetch_model_prices_raw, write_raw_prices_file
-
-DEFAULT_JSON_CATALOG_FILE = "data/model_prices.generated.json"
-DEFAULT_PYTHON_CATALOG_FILE = "tokenary/_generated.py"
-
-
-def get_json_catalog_path(catalog_path: str | Path | None = None) -> Path:
-    return (
-        Path(catalog_path)
-        if catalog_path is not None
-        else Path(DEFAULT_JSON_CATALOG_FILE)
-    )
-
-
-def get_python_catalog_path(catalog_path: str | Path | None = None) -> Path:
-    return (
-        Path(catalog_path)
-        if catalog_path is not None
-        else Path(DEFAULT_PYTHON_CATALOG_FILE)
-    )
 
 
 def _enum_name_for_model(model_name: str, used_names: set[str]) -> str:
@@ -168,25 +145,3 @@ def write_python_catalog_file(
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(render_python_catalog(raw_prices), encoding="utf-8")
     return path
-
-
-def generate_catalog_artifacts(
-    output_json_path: str | Path | None = None,
-    output_python_path: str | Path | None = None,
-    source_url: str = DEFAULT_PRICE_URL,
-    generate_json: bool = True,
-) -> tuple[Path | None, Path]:
-    raw_prices = fetch_model_prices_raw(url=source_url)
-
-    json_path: Path | None = None
-    if generate_json:
-        json_path = write_raw_prices_file(
-            raw_prices=raw_prices, output_path=get_json_catalog_path(output_json_path)
-        )
-
-    python_path = write_python_catalog_file(
-        raw_prices=raw_prices,
-        output_path=get_python_catalog_path(output_python_path),
-    )
-
-    return json_path, python_path

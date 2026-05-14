@@ -1,50 +1,28 @@
-from __future__ import annotations
+import logging
 
-import argparse
-from pathlib import Path
+from .downloader import fetch_model_prices_raw, write_raw_prices_file
+from .generator import write_python_catalog_file
 
-from .catalog import (
-    DEFAULT_JSON_CATALOG_FILE,
-    DEFAULT_PYTHON_CATALOG_FILE,
-    generate_catalog_artifacts,
-)
-from .downloader import DEFAULT_PRICE_URL
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
-
-def cli_generate() -> None:
-    parser = argparse.ArgumentParser(
-        description="Generate local pricing artifacts from LiteLLM model price data."
-    )
-    parser.add_argument("--url", default=DEFAULT_PRICE_URL, help="Source JSON URL.")
-    parser.add_argument(
-        "--json-output",
-        default=DEFAULT_JSON_CATALOG_FILE,
-        help="Output JSON file path.",
-    )
-    parser.add_argument(
-        "--python-output",
-        default=DEFAULT_PYTHON_CATALOG_FILE,
-        help="Output Python file path.",
-    )
-    parser.add_argument(
-        "--no-json", action="store_true", help="Do not generate JSON output."
-    )
-    args = parser.parse_args()
-
-    json_path, python_path = generate_catalog_artifacts(
-        output_json_path=args.json_output,
-        output_python_path=args.python_output,
-        source_url=args.url,
-        generate_json=not args.no_json,
-    )
-
-    if json_path is not None:
-        print(f"Generated pricing JSON catalog: {json_path}")
-    print(f"Generated pricing Python catalog: {Path(python_path)}")
+_JSON_OUTPUT = "data/model_prices.generated.json"
+_PYTHON_OUTPUT = "tokenary/_generated.py"
 
 
 def main() -> None:
-    cli_generate()
+    logger.info("Tokenary Price Generator\n")
+
+    raw_prices = fetch_model_prices_raw()
+    logger.info(f"✓ Downloaded {len(raw_prices)} models")
+
+    write_raw_prices_file(raw_prices, _JSON_OUTPUT)
+    logger.info(f"✓ Saved JSON: {_JSON_OUTPUT}")
+
+    write_python_catalog_file(raw_prices, _PYTHON_OUTPUT)
+    logger.info(f"✓ Generated Python: {_PYTHON_OUTPUT}")
+
+    logger.info("\n✅ Generation complete!")
 
 
 if __name__ == "__main__":
