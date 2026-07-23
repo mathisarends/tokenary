@@ -2,6 +2,8 @@
 
 Minimal Python library to calculate LLM API costs based on the LiteLLM model catalog.
 
+The bundled pricing data (`tokenary/_generated.py`, `data/model_prices.generated.json`) is generated from the [LiteLLM model prices catalog](https://github.com/BerriAI/litellm). You are not dependent on a new `tokenary` release to pick up pricing updates: the generator ships as part of the installed package, so you can re-run it yourself at any time (see [Generate pricing artifacts](#generate-pricing-artifacts)) to refresh the data against the latest LiteLLM catalog.
+
 ## Installation
 
 ```bash
@@ -77,8 +79,22 @@ The returned `CostBreakdown` object contains per-category costs (`input_cost`, `
 
 ## Generate pricing artifacts
 
-Re-generate the bundled pricing data from the LiteLLM catalog:
+All pricing data bundled with `tokenary` is generated from the LiteLLM model prices catalog, not hand-maintained. This means you can re-generate it locally at any time, e.g. to pick up upstream LiteLLM pricing changes before a new `tokenary` release ships them.
+
+This works with a plain `pip install tokenary` too — the generator is part of the installed package, so no repo checkout is required:
 
 ```bash
 python -m tokenary.generator
+```
+
+or via the `tokenary-generate` console script installed alongside the package:
+
+```bash
+tokenary-generate
+```
+
+If you're working from a repo checkout, there's also a helper script:
+
+```bash
+./scripts/generate_catalog.sh
 ```

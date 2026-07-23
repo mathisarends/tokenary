@@ -133,7 +133,8 @@ def render_python_catalog(raw_prices: dict[str, object]) -> str:
         [
             "",
             "MODEL_PRICINGS_BY_NAME: dict[str, GeneratedModelPricing] = {",
-            "    model_name.value: pricing for model_name, pricing in MODEL_PRICINGS.items()",
+            "    model_name.value: pricing",
+            "    for model_name, pricing in MODEL_PRICINGS.items()",
             "}",
         ]
     )

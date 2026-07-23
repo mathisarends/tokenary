@@ -4,8 +4,14 @@ import json
 
 import pytest
 
-from tokenary.generator.downloader import fetch_model_prices_raw, write_raw_prices_file
-from tokenary.generator.generator import render_python_catalog, write_python_catalog_file
+from tokenary.generator.downloader import (
+    fetch_model_prices_raw,
+    write_raw_prices_file,
+)
+from tokenary.generator.generator import (
+    render_python_catalog,
+    write_python_catalog_file,
+)
 
 
 class _FakeResponse:
@@ -22,7 +28,9 @@ class _FakeResponse:
         return None
 
 
-def test_fetch_model_prices_raw_returns_json_object(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_fetch_model_prices_raw_returns_json_object(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     payload = json.dumps({"sample_spec": {}, "my-model": {"mode": "chat"}})
 
     def fake_urlopen(request, timeout=30):
@@ -37,7 +45,9 @@ def test_fetch_model_prices_raw_returns_json_object(monkeypatch: pytest.MonkeyPa
     assert result["my-model"]["mode"] == "chat"
 
 
-def test_fetch_model_prices_raw_rejects_non_object(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_fetch_model_prices_raw_rejects_non_object(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def fake_urlopen(request, timeout=30):
         return _FakeResponse("[]")
 
