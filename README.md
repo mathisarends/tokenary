@@ -146,6 +146,32 @@ If migrating from the original API, add previously separate reasoning or audio
 counts to the corresponding total once; continue passing the subset fields for
 the breakdown. Passing a request object with conflicting usage keywords fails.
 
+### Provider usage adapters
+
+Normalize a response's usage object without installing provider SDKs:
+
+```python
+from tokenary import from_openai_usage
+from my_prices import calculate
+
+request = from_openai_usage("o1", response.usage)
+result = calculate(request)
+```
+
+`from_openai_usage` accepts dictionaries or SDK objects with `model_dump()` for
+both Responses and Chat Completions usage. It preserves inclusive totals and
+extracts reasoning, cache-read and audio details. An ambiguous combination of
+audio and cache counters is rejected rather than guessing their overlap.
+
+`from_anthropic_usage(model, response.usage)` adds separately reported ordinary
+input, cache reads and cache writes into one inclusive total, and retains the
+five-minute/one-hour write split. This follows Anthropic's
+[cache token accounting](https://platform.claude.com/docs/en/build-with-claude/prompt-caching).
+Unsupported server-tool charges and nonstandard service tiers are rejected.
+Adapters handle token usage; other supported costs can be added by creating a
+request with the corresponding explicit usage fields. Pricing uses standard
+service rates; region-specific models must use their exact catalog ID.
+
 ## Reproducible generation and drift checks
 
 Live generation downloads the latest catalog from

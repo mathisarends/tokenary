@@ -1,8 +1,9 @@
 from typing import TYPE_CHECKING, Any
 
 from .catalog import CatalogMetadata, PricingCatalog
-from .errors import MissingPriceError
+from .errors import MissingPriceError, UnsupportedUsageError
 from .tokenary import calculate
+from .usage import from_anthropic_usage, from_openai_usage
 from .views import CostBreakdown, UsageCostRequest
 
 if TYPE_CHECKING:
@@ -15,7 +16,10 @@ __all__ = [
     "MissingPriceError",
     "PricingCatalog",
     "UsageCostRequest",
+    "UnsupportedUsageError",
     "calculate",
+    "from_anthropic_usage",
+    "from_openai_usage",
 ]
 
 
