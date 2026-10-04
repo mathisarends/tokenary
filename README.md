@@ -98,10 +98,14 @@ loading it never mutates the installed package or changes a global default.
 | Parameter | Type | Meaning |
 | --- | --- | --- |
 | `model` | `str` / `StrEnum` | Exact model identifier |
-| `input_tokens` | `int` | Input tokens |
-| `output_tokens` | `int` | Output tokens excluding separately supplied reasoning |
-| `reasoning_tokens` | `int` | Additional reasoning tokens |
-| `audio_input_tokens` | `int` | Audio input tokens |
+| `input_tokens` | `int` | Total input including cache and audio subsets |
+| `output_tokens` | `int` | Total output including reasoning and audio subsets |
+| `reasoning_tokens` | `int` | Reasoning subset of output tokens |
+| `audio_input_tokens` | `int` | Audio subset of input tokens |
+| `audio_output_tokens` | `int` | Audio subset of output tokens |
+| `cached_input_tokens` | `int` | Text cache-read subset of input tokens |
+| `cache_creation_input_tokens` | `int` | Total text cache-write subset of input tokens |
+| `cache_creation_1h_input_tokens` | `int` | One-hour subset of cache writes |
 | `generated_images` | `int` | Generated images |
 | `code_interpreter_sessions` | `int` | Code interpreter sessions |
 | `file_search_calls` | `int` | File search calls |
@@ -111,12 +115,36 @@ loading it never mutates the installed package or changes a global default.
 Results contain a per-category `CostBreakdown` and `total_cost` in USD. Usage must
 be nonnegative and finite; unknown request fields are rejected.
 
-The calculator currently uses the basic per-category rates. Cache discounts,
-context-size tariff tiers, pixel pricing and other provider-specific rules are
-retained in catalog data but are not applied by this calculator. A missing rate
-currently contributes zero. Check whether these limitations fit your estimate.
-If an API's output count already includes reasoning tokens, subtract those tokens
-before supplying both fields here.
+Every requested nonzero category must have a supported rate. Missing rates raise
+`MissingPriceError`, including a model that only has pixel prices when you request
+a per-image calculation. Explicit zero prices are valid; unused categories do not
+require a price. Pixel, character, duration and service-tier billing are not
+implemented and must not be approximated with unrelated token or image rates.
+
+Cache reads, five-minute writes and one-hour writes are separate from ordinary
+input. Known `*_above_<N>k_tokens` tariff fields apply above their strict threshold
+to the entire category, based on total input context, including cached tokens.
+The highest matching threshold wins. Output rates use that same input threshold.
+
+Input and output totals are inclusive. Reasoning and audio tokens are subsets,
+not quantities to add again. All disjoint subsets must fit within their total.
+This follows OpenAI's reported
+[reasoning usage](https://developers.openai.com/api/docs/guides/reasoning).
+Cost totals are computed from the breakdown rather than independently stored;
+results also include the source and selected-catalog checksums.
+
+For example, the bundled `o1` rates give $0.07266 for 100 input tokens and 1,186
+total output tokens, of which 1,024 are reasoning tokens:
+
+```python
+result = calculate(
+    model="o1", input_tokens=100, output_tokens=1186, reasoning_tokens=1024
+)
+```
+
+If migrating from the original API, add previously separate reasoning or audio
+counts to the corresponding total once; continue passing the subset fields for
+the breakdown. Passing a request object with conflicting usage keywords fails.
 
 ## Reproducible generation and drift checks
 

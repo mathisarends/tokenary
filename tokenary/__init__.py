@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any
 
 from .catalog import CatalogMetadata, PricingCatalog
+from .errors import MissingPriceError
 from .tokenary import calculate
 from .views import CostBreakdown, UsageCostRequest
 
@@ -11,6 +12,7 @@ __all__ = [
     "CatalogMetadata",
     "CostBreakdown",
     "ModelName",
+    "MissingPriceError",
     "PricingCatalog",
     "UsageCostRequest",
     "calculate",

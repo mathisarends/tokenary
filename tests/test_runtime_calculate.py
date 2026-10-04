@@ -34,8 +34,8 @@ def test_calculate_returns_full_breakdown_for_all_cost_components() -> None:
         vector_store_gb_days=1.2,
     )
     assert result.model == "demo-model"
-    assert result.input_cost == pytest.approx(0.1)
-    assert result.output_cost == pytest.approx(0.1)
+    assert result.input_cost == pytest.approx(0.075)
+    assert result.output_cost == pytest.approx(0.08)
     assert result.reasoning_cost == pytest.approx(0.03)
     assert result.audio_input_cost == pytest.approx(0.1)
     assert result.image_cost == pytest.approx(1.0)
@@ -43,7 +43,7 @@ def test_calculate_returns_full_breakdown_for_all_cost_components() -> None:
     assert result.file_search_call_cost == pytest.approx(0.5)
     assert result.file_search_storage_cost == pytest.approx(1.5)
     assert result.vector_store_cost == pytest.approx(0.84)
-    assert result.total_cost == pytest.approx(10.17)
+    assert result.total_cost == pytest.approx(10.125)
     assert catalog.loaded_model_count == 1
 
 
@@ -51,7 +51,12 @@ def test_calculate_uses_output_rate_when_reasoning_rate_is_missing() -> None:
     catalog = PricingCatalog.from_raw_prices(
         {"reasoning-fallback": {"output_cost_per_token": 0.002}}
     )
-    result = calculate(model="reasoning-fallback", reasoning_tokens=40, catalog=catalog)
+    result = calculate(
+        model="reasoning-fallback",
+        output_tokens=40,
+        reasoning_tokens=40,
+        catalog=catalog,
+    )
     assert result.reasoning_cost == pytest.approx(0.08)
     assert result.total_cost == pytest.approx(0.08)
 
