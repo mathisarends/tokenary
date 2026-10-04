@@ -1,31 +1,15 @@
-from functools import lru_cache
 from typing import overload
 
-from tokenary._generated import MODEL_PRICINGS_BY_NAME, SAMPLE_SPEC
-from tokenary.views import (
-    CostBreakdown,
-    ModelPricing,
-    PricingCatalog,
-    UsageCostRequest,
-)
+from tokenary.catalog import PricingCatalog, get_default_catalog
+from tokenary.views import CostBreakdown, UsageCostRequest
 
-
-@lru_cache(maxsize=1)
-def _get_catalog() -> PricingCatalog:
-    models = {
-        name: ModelPricing.model_validate(pricing.model_dump())
-        for name, pricing in MODEL_PRICINGS_BY_NAME.items()
-    }
-
-    sample_spec = (
-        ModelPricing.model_validate(SAMPLE_SPEC.model_dump()) if SAMPLE_SPEC else None
-    )
-
-    return PricingCatalog(sample_spec=sample_spec, models=models)
+_get_catalog = get_default_catalog
 
 
 @overload
-def calculate(request: UsageCostRequest) -> CostBreakdown: ...
+def calculate(
+    request: UsageCostRequest, *, catalog: PricingCatalog | None = None
+) -> CostBreakdown: ...
 
 
 @overload
@@ -33,6 +17,7 @@ def calculate(
     request: None = None,
     *,
     model: str,
+    catalog: PricingCatalog | None = None,
     input_tokens: int = 0,
     output_tokens: int = 0,
     reasoning_tokens: int = 0,
@@ -49,6 +34,7 @@ def calculate(
     request: UsageCostRequest | None = None,
     *,
     model: str | None = None,
+    catalog: PricingCatalog | None = None,
     input_tokens: int = 0,
     output_tokens: int = 0,
     reasoning_tokens: int = 0,
@@ -75,7 +61,8 @@ def calculate(
             vector_store_gb_days=vector_store_gb_days,
         )
 
-    catalog = _get_catalog()
+    if catalog is None:
+        catalog = _get_catalog()
     pricing = catalog.models.get(request.model)
     if pricing is None:
         raise KeyError(f"Unknown model: {request.model!r}")

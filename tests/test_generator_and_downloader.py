@@ -69,7 +69,7 @@ def test_write_raw_prices_file_creates_missing_parent_dirs(tmp_path) -> None:
     assert output_file.exists()
 
 
-def test_render_python_catalog_emits_enum_and_pricing_constructors() -> None:
+def test_render_python_catalog_emits_enum_and_lazy_catalog() -> None:
     rendered = render_python_catalog(
         {
             "sample_spec": {},
@@ -81,8 +81,9 @@ def test_render_python_catalog_emits_enum_and_pricing_constructors() -> None:
     assert "class ModelName(StrEnum):" in rendered
     assert "AZURE_GPT_35_TURBO_0125" in rendered
     assert "MODEL_1024_X_1024_DALL_E_2" in rendered
-    assert "GeneratedModelPricing(" in rendered
-    assert "MODEL_PRICES_RAW" not in rendered
+    assert "CATALOG = PricingCatalog.from_dict(" in rendered
+    assert "calculate = partial(_calculate, catalog=CATALOG)" in rendered
+    assert "GeneratedModelPricing(" not in rendered
 
 
 def test_write_python_catalog_file_writes_importable_module(tmp_path) -> None:
@@ -101,5 +102,11 @@ def test_write_python_catalog_file_writes_importable_module(tmp_path) -> None:
 
     generated = py_path.read_text(encoding="utf-8")
 
-    assert "MODEL_PRICINGS_BY_NAME" in generated
-    assert "PRICING_AZURE_GPT_35_TURBO_0125" in generated
+    assert "CATALOG" in generated
+    assert "AZURE_GPT_35_TURBO_0125" in generated
+    namespace = {"__name__": "test_prices"}
+    exec(compile(generated, str(py_path), "exec"), namespace)
+    result = namespace["calculate"](
+        model=namespace["ModelName"].AZURE_GPT_35_TURBO_0125, input_tokens=100
+    )
+    assert result.total_cost == pytest.approx(0.0001)

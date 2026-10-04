@@ -1,8 +1,9 @@
 # tokenary
 
-Minimal Python library to calculate LLM API costs based on the LiteLLM model catalog.
-
-The bundled pricing data (`tokenary/_generated.py`, `data/model_prices.generated.json`) is generated from the [LiteLLM model prices catalog](https://github.com/BerriAI/litellm). You are not dependent on a new `tokenary` release to pick up pricing updates: the generator ships as part of the installed package, so you can re-run it yourself at any time (see [Generate pricing artifacts](#generate-pricing-artifacts)) to refresh the data against the latest LiteLLM catalog.
+Small Python library for LLM API cost estimates from the LiteLLM pricing catalog.
+The runtime contains a compact, compressed offline catalog instead of thousands
+of generated pricing constructors. It validates and caches only the models used.
+No network access is needed when calculating costs.
 
 ## Installation
 
@@ -10,91 +11,165 @@ The bundled pricing data (`tokenary/_generated.py`, `data/model_prices.generated
 pip install tokenary
 ```
 
-## Usage
+## Generate only the models you use
 
-### Functional API
+Generate a small module containing just your selected models:
+
+```bash
+tokenary-generate --models gpt-4o o1 --output my_prices.py
+```
+
+Then use that module's enum and calculator:
 
 ```python
-import tokenary
-from tokenary import ModelName
+from my_prices import ModelName, calculate
 
-result = tokenary.calculate(
-    model=ModelName.AZURE_GPT_3_5_TURBO,
+result = calculate(
+    model=ModelName.GPT_4O,
     input_tokens=1000,
     output_tokens=500,
 )
-
 print(result.total_cost)
+```
+
+The generated module has its own catalog. Calculating with it does not load the
+bundled full catalog or construct price objects for unrelated models. It imports
+the shared calculation engine from `tokenary`; it does not duplicate library code.
+Generation works after a plain `pip install tokenary` and does not require Ruff.
+
+Use exact LiteLLM model IDs. An unknown ID fails generation without changing the
+output. Pass `--all` explicitly if you want the entire catalog.
+
+## Default API
+
+The default API still works with the bundled catalog:
+
+```python
+from tokenary import calculate
+
+result = calculate(model="gpt-4o", input_tokens=1000, output_tokens=500)
 print(result.model_dump())
 ```
 
-### Request object
+`from tokenary import ModelName` also remains supported, including the existing
+enum member names. This explicitly loads the full model-name enum. Use string IDs
+or the generated subset enum when you want to avoid that work. Generated enums
+also provide static model names for IDE completion.
+
+The bundled data file is included in every wheel for offline compatibility.
+Generating a subset avoids loading that data and limits generated code, but does
+not remove the bundled data file from an existing installation.
+
+### Request objects
 
 ```python
-from tokenary import ModelName, UsageCostRequest, calculate
+from tokenary import UsageCostRequest
+from my_prices import calculate
 
-request = UsageCostRequest(
-    model=ModelName.AZURE_GPT_3_5_TURBO,
-    input_tokens=2000,
-    output_tokens=800,
-    reasoning_tokens=200,
-)
-
+request = UsageCostRequest(model="gpt-4o", input_tokens=2000, output_tokens=800)
 result = calculate(request)
-print(result.model_dump())
 ```
 
-### Reasoning tokens (e.g. o1)
+Model IDs are strings, so a generated subset or custom catalog can contain models
+that were not known when your installed `tokenary` version was released.
+
+### JSON catalogs
+
+Python code generation is optional:
+
+```bash
+tokenary-generate --models gpt-4o o1 --output my_prices.json.gz
+```
 
 ```python
-from tokenary import ModelName, calculate
+from tokenary import PricingCatalog, calculate
 
-result = calculate(
-    model=ModelName.O1,
-    input_tokens=500,
-    output_tokens=200,
-    reasoning_tokens=300,
-)
-
-print(f"Total: ${result.total_cost:.6f}")
-print(f"  Reasoning: ${result.reasoning_cost:.6f}")
+catalog = PricingCatalog.from_file("my_prices.json.gz")
+result = calculate(model="gpt-4o", input_tokens=1000, catalog=catalog)
+print(catalog.loaded_model_count)  # 1
+print(catalog.metadata.source_sha256)
 ```
 
-### All supported parameters
+Plain `.json` output is supported too. A selected catalog is explicit per call;
+loading it never mutates the installed package or changes a global default.
 
-| Parameter                   | Type        | Description                    |
-| --------------------------- | ----------- | ------------------------------ |
-| `model`                     | `ModelName` | Model identifier               |
-| `input_tokens`              | `int`       | Number of input tokens         |
-| `output_tokens`             | `int`       | Number of output tokens        |
-| `reasoning_tokens`          | `int`       | Reasoning tokens (e.g. o1)     |
-| `audio_input_tokens`        | `int`       | Audio input tokens             |
-| `generated_images`          | `int`       | Number of generated images     |
-| `code_interpreter_sessions` | `int`       | Code interpreter sessions      |
-| `file_search_calls`         | `int`       | File search API calls          |
-| `file_search_gb_days`       | `float`     | File search storage (GB-days)  |
-| `vector_store_gb_days`      | `float`     | Vector store storage (GB-days) |
+### Supported usage parameters
 
-The returned `CostBreakdown` object contains per-category costs (`input_cost`, `output_cost`, `reasoning_cost`, …) and a `total_cost`, all in USD.
+| Parameter | Type | Meaning |
+| --- | --- | --- |
+| `model` | `str` / `StrEnum` | Exact model identifier |
+| `input_tokens` | `int` | Input tokens |
+| `output_tokens` | `int` | Output tokens excluding separately supplied reasoning |
+| `reasoning_tokens` | `int` | Additional reasoning tokens |
+| `audio_input_tokens` | `int` | Audio input tokens |
+| `generated_images` | `int` | Generated images |
+| `code_interpreter_sessions` | `int` | Code interpreter sessions |
+| `file_search_calls` | `int` | File search calls |
+| `file_search_gb_days` | `float` | File search storage in GB-days |
+| `vector_store_gb_days` | `float` | Vector store storage in GB-days |
 
-## Generate pricing artifacts
+Results contain a per-category `CostBreakdown` and `total_cost` in USD. Usage must
+be nonnegative and finite; unknown request fields are rejected.
 
-All pricing data bundled with `tokenary` is generated from the LiteLLM model prices catalog, not hand-maintained. This means you can re-generate it locally at any time, e.g. to pick up upstream LiteLLM pricing changes before a new `tokenary` release ships them.
+The calculator currently uses the basic per-category rates. Cache discounts,
+context-size tariff tiers, pixel pricing and other provider-specific rules are
+retained in catalog data but are not applied by this calculator. A missing rate
+currently contributes zero. Check whether these limitations fit your estimate.
+If an API's output count already includes reasoning tokens, subtract those tokens
+before supplying both fields here.
 
-This works with a plain `pip install tokenary` too — the generator is part of the installed package, so no repo checkout is required:
+## Reproducible generation and drift checks
+
+Live generation downloads the latest catalog from
+[LiteLLM](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json).
+For repeatable builds, keep a JSON snapshot and generate from it:
 
 ```bash
-python -m tokenary.generator
+tokenary-generate --input prices.lock.json --models gpt-4o o1 --output my_prices.py
+tokenary-generate --input prices.lock.json --models gpt-4o o1 --output my_prices.py --check
 ```
 
-or via the `tokenary-generate` console script installed alongside the package:
+`--check` exits with status 1 if the output is missing or has drifted, and never
+rewrites it. Python checks compare syntax trees so formatting changes do not cause
+false drift reports. JSON and gzip output are checked byte for byte.
+
+Each output records the source identifier, the SHA-256 of the canonical full
+source JSON, and a checksum of the selected prices and enum names. Input ordering
+and generation time do not affect output. Gzip timestamps are fixed. Runtime
+loaders verify the selected catalog's checksum.
+
+Regeneration preserves existing output enum names, including collisions. New
+collisions receive a deterministic hash suffix instead of renumbering old names.
+Subset names are resolved against the full source and the bundled name history.
+All generation and runtime validation share one pricing schema. Only provider,
+mode and price fields are included; upstream capability and context metadata is
+kept in the source snapshot instead of copied into every installation.
+
+## Development
 
 ```bash
-tokenary-generate
+uv sync --locked
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+uv build --wheel
 ```
 
-If you're working from a repo checkout, there's also a helper script:
+The repository keeps its upstream snapshot at
+`data/model_prices.generated.json`; that full snapshot is not included in wheels.
+Rebuild the bundled compressed catalog from that pinned source with:
 
 ```bash
 ./scripts/generate_catalog.sh
+./scripts/generate_catalog.sh --check
 ```
+
+On Windows, the equivalent command is:
+
+```powershell
+uv run tokenary-generate --input data/model_prices.generated.json --source https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json --all --output tokenary/data/catalog.json.gz
+```
+
+Update the upstream snapshot deliberately, then regenerate and review the price
+diff before committing. CI checks that the pinned snapshot and bundled catalog
+agree, alongside tests, lint, formatting and wheel construction.

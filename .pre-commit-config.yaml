@@ -10,7 +10,7 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: ["--maxkb=1000"]
-        exclude: ^tokenary/_generated\.py$
+        exclude: ^data/model_prices\.generated\.json$
       - id: check-case-conflict
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
