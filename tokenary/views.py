@@ -80,7 +80,5 @@ class CostBreakdown(BaseModel):
     @property
     def total_cost(self) -> float:
         return math.fsum(
-            getattr(self, field)
-            for field in type(self).model_fields
-            if field.endswith("_cost")
+            value for field, value in self.__dict__.items() if field.endswith("_cost")
         )

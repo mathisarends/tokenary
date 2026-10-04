@@ -1,3 +1,4 @@
+import gzip
 import json
 import subprocess
 import sys
@@ -10,6 +11,7 @@ from tokenary.catalog import PricingCatalog
 from tokenary.generator.__main__ import main
 from tokenary.generator.generator import (
     build_catalog_payload,
+    catalog_file_matches,
     read_existing_enum_names,
     render_catalog_file,
     render_python_catalog,
@@ -75,6 +77,22 @@ def test_generation_is_byte_reproducible_even_if_source_order_changes(raw_prices
     )
     for path in ["prices.py", "prices.json", "prices.json.gz"]:
         assert render_catalog_file(forward, path) == render_catalog_file(reverse, path)
+
+
+def test_gzip_drift_check_ignores_compressor_and_header_differences(
+    tmp_path, raw_prices
+):
+    path = tmp_path / "prices.json.gz"
+    rendered = render_catalog_file(build_catalog_payload(raw_prices), path)
+    other_encoding = gzip.compress(
+        gzip.decompress(rendered), compresslevel=1, mtime=123
+    )
+    assert other_encoding != rendered
+    path.write_bytes(other_encoding)
+    assert catalog_file_matches(path, rendered)
+    raw_prices["gpt-4o"]["input_cost_per_token"] = 100
+    changed = render_catalog_file(build_catalog_payload(raw_prices), path)
+    assert not catalog_file_matches(path, changed)
 
 
 def test_generated_subset_uses_its_own_catalog_without_loading_default(

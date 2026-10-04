@@ -61,6 +61,23 @@ def test_generation_and_runtime_share_the_exact_pricing_schema() -> None:
     assert GeneratedModelPricing is ModelPricing
 
 
+def test_catalog_is_a_snapshot_of_mutable_caller_input():
+    source = {"one": {"input_cost_per_token": 0.25}}
+    payload = build_catalog_payload(source)
+    catalog = PricingCatalog.from_dict(payload)
+    payload["models"]["one"]["input_cost_per_token"] = 100
+    assert calculate(model="one", input_tokens=4, catalog=catalog).total_cost == 1
+
+
+def test_malformed_metadata_and_enum_names_fail_clearly():
+    payload = build_catalog_payload({"one": {}})
+    payload["metadata"] = {"unexpected": 123}
+    with pytest.raises(ValueError, match="metadata fields"):
+        PricingCatalog.from_dict(payload)
+    with pytest.raises(ValueError, match="Python identifiers"):
+        PricingCatalog({"one": {}}, enum_names={"one": "not-an-identifier"})
+
+
 @pytest.mark.parametrize("suffix", [".json", ".json.gz"])
 def test_catalog_file_roundtrip_and_checksum(tmp_path, suffix) -> None:
     payload = build_catalog_payload(

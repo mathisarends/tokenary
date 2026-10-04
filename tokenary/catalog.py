@@ -3,6 +3,7 @@
 import gzip
 import json
 from collections.abc import Iterator, Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import cached_property, lru_cache
@@ -25,7 +26,7 @@ class CatalogMetadata:
 
 class _LazyPricings(Mapping[str, ModelPricing]):
     def __init__(self, models: Mapping[str, dict[str, object]]) -> None:
-        self._raw = dict(models)
+        self._raw = deepcopy(dict(models))
         self._validated: dict[str, ModelPricing] = {}
 
     def __getitem__(self, model: str) -> ModelPricing:
@@ -87,6 +88,13 @@ class PricingCatalog:
             raise ValueError("Catalog must contain models and enum_names objects")
         if not isinstance(metadata, dict):
             raise ValueError("Catalog must contain metadata")
+        metadata_fields = {"source", "source_sha256", "catalog_sha256"}
+        if set(metadata) != metadata_fields or any(
+            not isinstance(value, str) for value in metadata.values()
+        ):
+            raise ValueError(
+                "Catalog metadata fields must be source and SHA-256 strings"
+            )
         if set(models) != set(names):
             raise ValueError("Catalog model names do not match pricing entries")
         if any(not isinstance(data, dict) for data in models.values()):

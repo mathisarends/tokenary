@@ -2,6 +2,7 @@
 
 import math
 import re
+from functools import cached_property
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, PrivateAttr, model_validator
@@ -82,9 +83,16 @@ class ModelPricing(BaseModel):
             tiers.sort(reverse=True)
         return self
 
+    @cached_property
+    def _rate_index(
+        self,
+    ) -> tuple[dict[str, float], dict[str, list[tuple[int, float]]]]:
+        return self._rates, self._tiers
+
     def rate(self, field: str, input_tokens: int) -> float | None:
         """Long-context tariffs apply to the whole category above the threshold."""
-        for threshold, rate in self._tiers.get(field, ()):
+        rates, tiers = self._rate_index
+        for threshold, rate in tiers.get(field, ()):
             if input_tokens > threshold:
                 return rate
-        return self._rates.get(field)
+        return rates.get(field)

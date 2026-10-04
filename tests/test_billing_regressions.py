@@ -159,3 +159,5 @@ def test_breakdown_total_and_catalog_provenance_are_serialized():
     assert dumped["total_cost"] == result.total_cost
     assert len(dumped["pricing_source_sha256"]) == 64
     assert len(dumped["pricing_catalog_sha256"]) == 64
+    changed = result.model_copy(update={"input_cost": 1.0})
+    assert changed.total_cost == pytest.approx(1.0 + result.output_cost)

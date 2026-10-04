@@ -122,6 +122,12 @@ def catalog_file_matches(path: Path, rendered: bytes) -> bool:
     if not path.exists():
         return False
     existing = path.read_bytes()
+    if path.suffix == ".gz":
+        try:
+            # Different zlib builds can encode the same JSON differently.
+            return gzip.decompress(existing) == gzip.decompress(rendered)
+        except (OSError, EOFError):
+            return False
     if path.suffix != ".py":
         return existing == rendered
     try:

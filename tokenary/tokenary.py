@@ -1,3 +1,5 @@
+from functools import partial
+
 from tokenary.catalog import PricingCatalog, get_default_catalog
 from tokenary.errors import MissingPriceError
 from tokenary.pricing import ModelPricing
@@ -87,8 +89,7 @@ def calculate(
     if pricing is None:
         raise KeyError(f"Unknown model: {request.model!r}")
 
-    def cost(quantity: int | float, field: str, **options) -> float:
-        return _unit_cost(request, pricing, quantity, field, **options)
+    cost = partial(_unit_cost, request, pricing)
 
     plain_input = (
         request.input_tokens
