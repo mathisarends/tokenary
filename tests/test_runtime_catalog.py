@@ -9,7 +9,6 @@ from pydantic import ValidationError
 from tokenary import ModelName, PricingCatalog, calculate
 from tokenary.catalog import get_default_catalog
 from tokenary.generator.generator import build_catalog_payload, render_catalog_file
-from tokenary.generator.schemas import GeneratedModelPricing
 from tokenary.pricing import ModelPricing
 
 
@@ -57,8 +56,17 @@ def test_default_catalog_keeps_public_model_names_and_is_cached() -> None:
     assert get_default_catalog() is get_default_catalog()
 
 
-def test_generation_and_runtime_share_the_exact_pricing_schema() -> None:
-    assert GeneratedModelPricing is ModelPricing
+def test_generation_and_runtime_share_pricing_validation() -> None:
+    raw_prices = {"one": {"input_cost_per_token": 0.25}}
+    catalog = PricingCatalog.from_dict(build_catalog_payload(raw_prices))
+    assert isinstance(catalog.models["one"], ModelPricing)
+    assert catalog.models["one"].input_cost_per_token == 0.25
+
+    raw_prices["one"]["input_cost_per_token"] = -1
+    with pytest.raises(ValidationError):
+        build_catalog_payload(raw_prices)
+    with pytest.raises(ValidationError):
+        PricingCatalog.from_raw_prices(raw_prices).models["one"]
 
 
 def test_catalog_is_a_snapshot_of_mutable_caller_input():
