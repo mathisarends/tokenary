@@ -40,3 +40,9 @@ jobs:
 
       - name: Build wheel
         run: uv build --wheel
+
+      - name: Smoke-test installed wheel without dev dependencies
+        run: >-
+          uv run --isolated --no-project --python ${{ matrix.python-version }}
+          --with dist/tokenary-0.2.0-py3-none-any.whl
+          python -I scripts/smoke_installed.py

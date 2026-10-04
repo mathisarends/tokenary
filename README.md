@@ -185,12 +185,14 @@ tokenary-generate --input prices.lock.json --models gpt-4o o1 --output my_prices
 
 `--check` exits with status 1 if the output is missing or has drifted, and never
 rewrites it. Python checks compare syntax trees so formatting changes do not cause
-false drift reports. JSON and gzip output are checked byte for byte.
+false drift reports. JSON and gzip checks compare canonical JSON content so
+formatting, checkout line endings and Python/zlib builds do not cause false drift.
 
 Each output records the source identifier, the SHA-256 of the canonical full
 source JSON, and a checksum of the selected prices and enum names. Input ordering
-and generation time do not affect output. Gzip timestamps are fixed. Runtime
-loaders verify the selected catalog's checksum.
+and generation time do not affect output with the same serializer/compressor.
+Gzip timestamps are fixed; canonical content hashes are independent of gzip
+encoding. Runtime loaders verify the selected catalog's checksum.
 
 Regeneration preserves existing output enum names, including collisions. New
 collisions receive a deterministic hash suffix instead of renumbering old names.
@@ -207,6 +209,7 @@ uv run pytest
 uv run ruff check .
 uv run ruff format --check .
 uv build --wheel
+uv run python scripts/benchmark_runtime.py
 ```
 
 The repository keeps its upstream snapshot at
@@ -227,3 +230,29 @@ uv run tokenary-generate --input data/model_prices.generated.json --source https
 Update the upstream snapshot deliberately, then regenerate and review the price
 diff before committing. CI checks that the pinned snapshot and bundled catalog
 agree, alongside tests, lint, formatting and wheel construction.
+An isolated wheel smoke test also runs without development tools or provider SDKs
+to verify subset generation, loading, default compatibility and a runtime source
+size budget. Benchmarks report local medians; they are not timing gates in CI.
+
+## Size and performance
+
+Compared with the original 0.1.0 wheel, the 0.2 runtime removes roughly 98% of
+installed Python source and 94% of unpacked package bytes. The full offline
+catalog is about 76 KB compressed. A generated module for `gpt-4o` and `o1` from
+the pinned snapshot is 1,677 bytes and does not load the bundled full catalog.
+
+Local Windows measurements with Python 3.14 and Pydantic 2.13.4 used isolated
+wheel installs, seven fresh processes and 10,000 calls per process:
+
+| Metric | Original 0.1.0 | 0.2 |
+| --- | ---: | ---: |
+| Import median | 137.6 ms | 101.8 ms |
+| First calculation including total | 20.1 ms | 15.8 ms |
+| Repeated keyword calculation including total | 3.2 us | 7.3 us |
+| Repeated prevalidated request including total | 2.1 us | 4.9 us |
+
+The added validation, category checks, context tiers and provenance have a cost
+per call. Startup and installation size improve; steady-state billing does more
+work. Use a generated subset to avoid the full default catalog's first-use load,
+and pass an adapter's validated request directly to `calculate`. These timings
+are illustrative local measurements and vary by Python build and machine.

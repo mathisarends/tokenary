@@ -95,6 +95,19 @@ def test_gzip_drift_check_ignores_compressor_and_header_differences(
     assert not catalog_file_matches(path, changed)
 
 
+def test_json_drift_check_ignores_checkout_line_endings_and_formatting(
+    tmp_path, raw_prices
+):
+    path = tmp_path / "prices.json"
+    payload = build_catalog_payload(raw_prices)
+    rendered = render_catalog_file(payload, path)
+    path.write_bytes(json.dumps(payload, indent=4).replace("\n", "\r\n").encode())
+    assert catalog_file_matches(path, rendered)
+    payload["metadata"]["source"] = "changed source"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    assert not catalog_file_matches(path, rendered)
+
+
 def test_generated_subset_uses_its_own_catalog_without_loading_default(
     tmp_path, raw_prices
 ):

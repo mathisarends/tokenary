@@ -3,6 +3,7 @@
 import ast
 import gzip
 import json
+import zlib
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from pprint import pformat
@@ -122,11 +123,16 @@ def catalog_file_matches(path: Path, rendered: bytes) -> bool:
     if not path.exists():
         return False
     existing = path.read_bytes()
-    if path.suffix == ".gz":
+    if path.suffix in {".json", ".gz"}:
         try:
-            # Different zlib builds can encode the same JSON differently.
-            return gzip.decompress(existing) == gzip.decompress(rendered)
-        except (OSError, EOFError):
+            # Ignore formatting, line endings and compressor implementation.
+            if path.suffix == ".gz":
+                existing = gzip.decompress(existing)
+                rendered = gzip.decompress(rendered)
+            return canonical_json(json.loads(existing)) == canonical_json(
+                json.loads(rendered)
+            )
+        except (OSError, EOFError, ValueError, zlib.error):
             return False
     if path.suffix != ".py":
         return existing == rendered
