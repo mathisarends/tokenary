@@ -65,10 +65,8 @@ def _render_payload_as_python(payload: dict[str, object]) -> str:
         "# Source and content checksums are stored in CATALOG.metadata.",
         "",
         "from enum import StrEnum",
-        "from functools import partial",
         "",
         "from tokenary import PricingCatalog",
-        "from tokenary import calculate as _calculate",
         "",
         "",
         "class ModelName(StrEnum):",
@@ -87,8 +85,6 @@ def _render_payload_as_python(payload: dict[str, object]) -> str:
             "CATALOG = PricingCatalog.from_dict(",
             *[f"    {line}" for line in rendered_payload.splitlines()],
             ")",
-            "",
-            "calculate = partial(_calculate, catalog=CATALOG)",
         ]
     )
     return "\n".join(lines) + "\n"

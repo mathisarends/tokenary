@@ -118,12 +118,15 @@ def test_generated_subset_uses_its_own_catalog_without_loading_default(
     code = """
 import importlib.util
 import sys
+from tokenary import calculate
 from tokenary.catalog import get_default_catalog
 spec = importlib.util.spec_from_file_location('selected', sys.argv[1])
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 assert module.CATALOG.loaded_model_count == 0
-result = module.calculate(model=module.ModelName.GPT_4O, input_tokens=1000)
+result = calculate(
+    model=module.ModelName.GPT_4O, input_tokens=1000, catalog=module.CATALOG
+)
 assert result.total_cost == 0.0025
 assert module.CATALOG.loaded_model_count == 1
 assert get_default_catalog.cache_info().currsize == 0

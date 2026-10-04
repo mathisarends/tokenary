@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+from tokenary import calculate
 from tokenary.generator.downloader import (
     fetch_model_prices_raw,
     write_raw_prices_file,
@@ -82,7 +83,7 @@ def test_render_python_catalog_emits_enum_and_lazy_catalog() -> None:
     assert "AZURE_GPT_35_TURBO_0125" in rendered
     assert "MODEL_1024_X_1024_DALL_E_2" in rendered
     assert "CATALOG = PricingCatalog.from_dict(" in rendered
-    assert "calculate = partial(_calculate, catalog=CATALOG)" in rendered
+    assert "calculate" not in rendered
     assert "GeneratedModelPricing(" not in rendered
 
 
@@ -106,7 +107,9 @@ def test_write_python_catalog_file_writes_importable_module(tmp_path) -> None:
     assert "AZURE_GPT_35_TURBO_0125" in generated
     namespace = {"__name__": "test_prices"}
     exec(compile(generated, str(py_path), "exec"), namespace)
-    result = namespace["calculate"](
-        model=namespace["ModelName"].AZURE_GPT_35_TURBO_0125, input_tokens=100
+    result = calculate(
+        model=namespace["ModelName"].AZURE_GPT_35_TURBO_0125,
+        input_tokens=100,
+        catalog=namespace["CATALOG"],
     )
     assert result.total_cost == pytest.approx(0.0001)

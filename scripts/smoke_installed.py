@@ -62,10 +62,11 @@ def main() -> None:
         spec = importlib.util.spec_from_file_location("selected_prices", output)
         selected = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(selected)
-        result = selected.calculate(
+        result = tokenary.calculate(
             model=selected.ModelName.GPT_4O,
             input_tokens=1000,
             cached_input_tokens=900,
+            catalog=selected.CATALOG,
         )
         assert abs(result.total_cost - 0.001375) < 1e-12
         assert len(selected.ModelName) == 1

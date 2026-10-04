@@ -11,38 +11,9 @@ No network access is needed when calculating costs.
 pip install tokenary
 ```
 
-## Generate only the models you use
+## Quick start
 
-Generate a small module containing just your selected models:
-
-```bash
-tokenary-generate --models gpt-4o o1 --output my_prices.py
-```
-
-Then use that module's enum and calculator:
-
-```python
-from my_prices import ModelName, calculate
-
-result = calculate(
-    model=ModelName.GPT_4O,
-    input_tokens=1000,
-    output_tokens=500,
-)
-print(result.total_cost)
-```
-
-The generated module has its own catalog. Calculating with it does not load the
-bundled full catalog or construct price objects for unrelated models. It imports
-the shared calculation engine from `tokenary`; it does not duplicate library code.
-Generation works after a plain `pip install tokenary` and does not require Ruff.
-
-Use exact LiteLLM model IDs. An unknown ID fails generation without changing the
-output. Pass `--all` explicitly if you want the entire catalog.
-
-## Default API
-
-The default API still works with the bundled catalog:
+Import `calculate` and start calculating. No generation or configuration is needed:
 
 ```python
 from tokenary import calculate
@@ -50,6 +21,11 @@ from tokenary import calculate
 result = calculate(model="gpt-4o", input_tokens=1000, output_tokens=500)
 print(result.model_dump())
 ```
+
+Tokenary automatically loads its bundled offline catalog on first use and
+validates only the requested models. Calculations never download prices; they
+use the snapshot shipped with the installed version. You can generate a custom
+catalog below when you want newer prices or a selected set of models.
 
 `from tokenary import ModelName` also remains supported, including the existing
 enum member names. This explicitly loads the full model-name enum. Use string IDs
@@ -63,8 +39,7 @@ not remove the bundled data file from an existing installation.
 ### Request objects
 
 ```python
-from tokenary import UsageCostRequest
-from my_prices import calculate
+from tokenary import UsageCostRequest, calculate
 
 request = UsageCostRequest(model="gpt-4o", input_tokens=2000, output_tokens=800)
 result = calculate(request)
@@ -72,6 +47,41 @@ result = calculate(request)
 
 Model IDs are strings, so a generated subset or custom catalog can contain models
 that were not known when your installed `tokenary` version was released.
+
+## Optional: generate only the models you use
+
+For a custom pricing snapshot, generate a small module containing just your
+selected models. Without `--input`, this command downloads the current upstream
+prices once; it does not change the installed default catalog:
+
+```bash
+tokenary-generate --models gpt-4o o1 --output my_prices.py
+```
+
+Import the calculator from `tokenary` and pass the generated catalog explicitly:
+
+```python
+from tokenary import calculate
+from my_prices import CATALOG, ModelName
+
+result = calculate(
+    model=ModelName.GPT_4O,
+    input_tokens=1000,
+    output_tokens=500,
+    catalog=CATALOG,
+)
+print(result.total_cost)
+```
+
+The generated module contains model names and pricing data. Passing its `CATALOG`
+to `tokenary.calculate` does not load the bundled full catalog or construct price
+objects for unrelated models. Calculation stays in `tokenary`; generated modules
+do not export a calculator or duplicate library code. Request objects and usage
+adapters work with a custom catalog through the same `catalog=CATALOG` argument.
+Generation works after a plain `pip install tokenary` and does not require Ruff.
+
+Use exact LiteLLM model IDs. An unknown ID fails generation without changing the
+output. Pass `--all` explicitly if you want the entire catalog.
 
 ### JSON catalogs
 
@@ -93,7 +103,7 @@ print(catalog.metadata.source_sha256)
 Plain `.json` output is supported too. A selected catalog is explicit per call;
 loading it never mutates the installed package or changes a global default.
 
-### Supported usage parameters
+## Supported usage parameters
 
 | Parameter | Type | Meaning |
 | --- | --- | --- |
@@ -151,8 +161,7 @@ the breakdown. Passing a request object with conflicting usage keywords fails.
 Normalize a response's usage object without installing provider SDKs:
 
 ```python
-from tokenary import from_openai_usage
-from my_prices import calculate
+from tokenary import calculate, from_openai_usage
 
 request = from_openai_usage("o1", response.usage)
 result = calculate(request)
@@ -197,9 +206,11 @@ encoding. Runtime loaders verify the selected catalog's checksum.
 Regeneration preserves existing output enum names, including collisions. New
 collisions receive a deterministic hash suffix instead of renumbering old names.
 Subset names are resolved against the full source and the bundled name history.
-All generation and runtime validation share one pricing schema. Only provider,
-mode and price fields are included; upstream capability and context metadata is
-kept in the source snapshot instead of copied into every installation.
+Generation and runtime use `tokenary.pricing.ModelPricing` directly. The former
+`tokenary.generator.schemas.GeneratedModelPricing` API has been removed; import
+`ModelPricing` from `tokenary.pricing` if you used that generator schema.
+Only provider, mode and price fields are included; upstream capability and context
+metadata is kept in the source snapshot instead of copied into every installation.
 
 ## Development
 
@@ -239,7 +250,7 @@ size budget. Benchmarks report local medians; they are not timing gates in CI.
 Compared with the original 0.1.0 wheel, the 0.2 runtime removes roughly 98% of
 installed Python source and 94% of unpacked package bytes. The full offline
 catalog is about 76 KB compressed. A generated module for `gpt-4o` and `o1` from
-the pinned snapshot is 1,677 bytes and does not load the bundled full catalog.
+the pinned snapshot is 1,552 bytes and does not load the bundled full catalog.
 
 Local Windows measurements with Python 3.14 and Pydantic 2.13.4 used isolated
 wheel installs, seven fresh processes and 10,000 calls per process:
