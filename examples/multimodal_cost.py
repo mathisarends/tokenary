@@ -1,10 +1,10 @@
 from tokenary import ModelName, calculate
 
-# o1 charges separately for reasoning tokens
+# Output totals include reasoning tokens; the breakdown separates their cost.
 result = calculate(
     model=ModelName.O1,
     input_tokens=500,
-    output_tokens=200,
+    output_tokens=500,
     reasoning_tokens=300,
 )
 

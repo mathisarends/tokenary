@@ -1,41 +1,119 @@
-from __future__ import annotations
+import json
+import pickle
+import subprocess
+import sys
 
 import pytest
+from pydantic import ValidationError
 
-from tokenary.tokenary import _get_catalog
-from tokenary.views import ModelPricing
-
-
-@pytest.fixture(autouse=True)
-def _clear_catalog_cache() -> None:
-    _get_catalog.cache_clear()
+from tokenary import ModelName, PricingCatalog, calculate
+from tokenary.catalog import get_default_catalog
+from tokenary.generator.generator import build_catalog_payload, render_catalog_file
+from tokenary.pricing import ModelPricing
 
 
-def test_get_catalog_converts_generated_models_to_runtime_models(monkeypatch) -> None:
-    fake_generated = {"my-model": ModelPricing(input_cost_per_token=0.5, mode="chat")}
-    fake_sample = ModelPricing(mode="chat", max_tokens=1024)
+def test_catalog_only_validates_requested_models_and_reuses_them() -> None:
+    catalog = PricingCatalog.from_raw_prices(
+        {
+            "used": {"input_cost_per_token": 0.5},
+            "unused-invalid": {"input_cost_per_token": "not a price"},
+            "sample_spec": {},
+        }
+    )
+    assert len(catalog.models) == 2
+    assert catalog.loaded_model_count == 0
+    first = catalog.models["used"]
+    assert catalog.models["used"] is first
+    assert catalog.loaded_model_count == 1
+    with pytest.raises(ValidationError):
+        catalog.models["unused-invalid"]
+    with pytest.raises(KeyError):
+        catalog.models["unknown"]
+    assert catalog.loaded_model_count == 1
 
-    monkeypatch.setattr("tokenary.tokenary.MODEL_PRICINGS_BY_NAME", fake_generated)
-    monkeypatch.setattr("tokenary.tokenary.SAMPLE_SPEC", fake_sample)
 
-    catalog = _get_catalog()
+def test_plain_import_does_not_load_catalog_or_generator() -> None:
+    code = """
+import sys
+import tokenary
+from tokenary.catalog import get_default_catalog
+assert get_default_catalog.cache_info().currsize == 0
+assert 'tokenary.generator.generator' not in sys.modules
+assert 'tokenary._generated' not in sys.modules
+tokenary.calculate(model='gpt-4o', input_tokens=1)
+catalog = get_default_catalog()
+assert catalog.loaded_model_count == 1
+assert 'model_enum' not in catalog.__dict__
+"""
+    subprocess.run([sys.executable, "-c", code], check=True)
 
-    assert "my-model" in catalog.models
-    assert catalog.models["my-model"].input_cost_per_token == pytest.approx(0.5)
-    assert catalog.sample_spec is not None
-    assert catalog.sample_spec.max_tokens == 1024
+
+def test_default_catalog_keeps_public_model_names_and_is_cached() -> None:
+    assert ModelName.AZURE_GPT_3_5_TURBO.value == "azure/gpt-3.5-turbo"
+    assert ModelName.COHERE_EMBED_V4_0.value == "cohere.embed-v4:0"
+    assert ModelName.COHERE_EMBED_V4_0_2.value == "cohere/embed-v4.0"
+    assert pickle.loads(pickle.dumps(ModelName.GPT_4O)) is ModelName.GPT_4O
+    assert get_default_catalog() is get_default_catalog()
 
 
-def test_get_catalog_is_cached_after_first_load(monkeypatch) -> None:
-    fake_generated = {"cached-model": ModelPricing(input_cost_per_token=1.0)}
+def test_generation_and_runtime_share_pricing_validation() -> None:
+    raw_prices = {"one": {"input_cost_per_token": 0.25}}
+    catalog = PricingCatalog.from_dict(build_catalog_payload(raw_prices))
+    assert isinstance(catalog.models["one"], ModelPricing)
+    assert catalog.models["one"].input_cost_per_token == 0.25
 
-    monkeypatch.setattr("tokenary.tokenary.MODEL_PRICINGS_BY_NAME", fake_generated)
-    monkeypatch.setattr("tokenary.tokenary.SAMPLE_SPEC", None)
+    raw_prices["one"]["input_cost_per_token"] = -1
+    with pytest.raises(ValidationError):
+        build_catalog_payload(raw_prices)
+    with pytest.raises(ValidationError):
+        PricingCatalog.from_raw_prices(raw_prices).models["one"]
 
-    first = _get_catalog()
 
-    monkeypatch.setattr("tokenary.tokenary.MODEL_PRICINGS_BY_NAME", {})
-    second = _get_catalog()
+def test_catalog_is_a_snapshot_of_mutable_caller_input():
+    source = {"one": {"input_cost_per_token": 0.25}}
+    payload = build_catalog_payload(source)
+    catalog = PricingCatalog.from_dict(payload)
+    payload["models"]["one"]["input_cost_per_token"] = 100
+    assert calculate(model="one", input_tokens=4, catalog=catalog).total_cost == 1
 
-    assert first is second
-    assert "cached-model" in second.models
+
+def test_malformed_metadata_and_enum_names_fail_clearly():
+    payload = build_catalog_payload({"one": {}})
+    payload["metadata"] = {"unexpected": 123}
+    with pytest.raises(ValueError, match="metadata fields"):
+        PricingCatalog.from_dict(payload)
+    with pytest.raises(ValueError, match="Python identifiers"):
+        PricingCatalog({"one": {}}, enum_names={"one": "not-an-identifier"})
+
+
+@pytest.mark.parametrize("suffix", [".json", ".json.gz"])
+def test_catalog_file_roundtrip_and_checksum(tmp_path, suffix) -> None:
+    payload = build_catalog_payload(
+        {"my-model": {"input_cost_per_token": 0.25}}, source="pinned-source"
+    )
+    path = tmp_path / f"prices{suffix}"
+    path.write_bytes(render_catalog_file(payload, path))
+    catalog = PricingCatalog.from_file(path)
+    assert catalog.metadata.source == "pinned-source"
+    assert catalog.loaded_model_count == 0
+    assert calculate(model="my-model", input_tokens=4, catalog=catalog).total_cost == 1
+
+    payload["models"]["my-model"]["input_cost_per_token"] = 100
+    with pytest.raises(ValueError, match="checksum"):
+        PricingCatalog.from_dict(payload)
+
+
+def test_catalog_rejects_unsupported_format_and_bad_model_names() -> None:
+    with pytest.raises(ValueError, match="format version"):
+        PricingCatalog.from_dict({"format_version": 999})
+    payload = build_catalog_payload({"one": {}})
+    payload["enum_names"] = {}
+    with pytest.raises(ValueError, match="do not match"):
+        PricingCatalog.from_dict(payload)
+
+
+def test_catalog_rejects_non_object_json(tmp_path) -> None:
+    path = tmp_path / "invalid.json"
+    path.write_text(json.dumps([]), encoding="utf-8")
+    with pytest.raises(ValueError, match="JSON object"):
+        PricingCatalog.from_file(path)

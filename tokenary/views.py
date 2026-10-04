@@ -1,59 +1,61 @@
-from pydantic import BaseModel, ConfigDict
+import math
+from typing import Self
 
-from tokenary._generated import ModelName
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from .catalog import PricingCatalog
+from .pricing import ModelPricing, SearchContextCost
 
-class SearchContextCost(BaseModel):
-    search_context_size_high: float | None = None
-    search_context_size_low: float | None = None
-    search_context_size_medium: float | None = None
-
-
-class ModelPricing(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    litellm_provider: str | None = None
-    mode: str | None = None
-
-    input_cost_per_token: float | None = None
-    output_cost_per_token: float | None = None
-    output_cost_per_reasoning_token: float | None = None
-
-    input_cost_per_audio_token: float | None = None
-    output_cost_per_image: float | None = None
-    file_search_cost_per_1k_calls: float | None = None
-    file_search_cost_per_gb_per_day: float | None = None
-    vector_store_cost_per_gb_per_day: float | None = None
-    code_interpreter_cost_per_session: float | None = None
-
-    max_input_tokens: int | str | None = None
-    max_output_tokens: int | str | None = None
-    max_tokens: int | str | None = None
-
-    search_context_cost_per_query: SearchContextCost | None = None
-
-
-class PricingCatalog(BaseModel):
-    sample_spec: ModelPricing | None = None
-    models: dict[str, ModelPricing]
+__all__ = [
+    "CostBreakdown",
+    "ModelPricing",
+    "PricingCatalog",
+    "SearchContextCost",
+    "UsageCostRequest",
+]
 
 
 class UsageCostRequest(BaseModel):
-    model: ModelName
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False, frozen=True)
 
-    input_tokens: int = 0
-    output_tokens: int = 0
-    reasoning_tokens: int = 0
-    audio_input_tokens: int = 0
+    model: str = Field(min_length=1)
 
-    generated_images: int = 0
-    code_interpreter_sessions: int = 0
-    file_search_calls: int = 0
-    file_search_gb_days: float = 0.0
-    vector_store_gb_days: float = 0.0
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    reasoning_tokens: int = Field(default=0, ge=0)
+    audio_input_tokens: int = Field(default=0, ge=0)
+    audio_output_tokens: int = Field(default=0, ge=0)
+    cached_input_tokens: int = Field(default=0, ge=0)
+    cache_creation_input_tokens: int = Field(default=0, ge=0)
+    cache_creation_1h_input_tokens: int = Field(default=0, ge=0)
+
+    generated_images: int = Field(default=0, ge=0)
+    code_interpreter_sessions: int = Field(default=0, ge=0)
+    file_search_calls: int = Field(default=0, ge=0)
+    file_search_gb_days: float = Field(default=0.0, ge=0)
+    vector_store_gb_days: float = Field(default=0.0, ge=0)
+
+    @model_validator(mode="after")
+    def validate_token_subsets(self) -> Self:
+        input_subsets = (
+            self.audio_input_tokens
+            + self.cached_input_tokens
+            + self.cache_creation_input_tokens
+        )
+        if input_subsets > self.input_tokens:
+            raise ValueError("Input token categories must not exceed input_tokens")
+        if self.reasoning_tokens + self.audio_output_tokens > self.output_tokens:
+            raise ValueError("Output token categories must not exceed output_tokens")
+        if self.cache_creation_1h_input_tokens > self.cache_creation_input_tokens:
+            raise ValueError(
+                "One-hour writes must not exceed cache_creation_input_tokens"
+            )
+        return self
 
 
 class CostBreakdown(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False, frozen=True)
+
     model: str
     currency: str = "USD"
 
@@ -61,6 +63,9 @@ class CostBreakdown(BaseModel):
     output_cost: float = 0.0
     reasoning_cost: float = 0.0
     audio_input_cost: float = 0.0
+    audio_output_cost: float = 0.0
+    cached_input_cost: float = 0.0
+    cache_creation_cost: float = 0.0
 
     image_cost: float = 0.0
     code_interpreter_cost: float = 0.0
@@ -68,4 +73,12 @@ class CostBreakdown(BaseModel):
     file_search_storage_cost: float = 0.0
     vector_store_cost: float = 0.0
 
-    total_cost: float = 0.0
+    pricing_source_sha256: str | None = None
+    pricing_catalog_sha256: str | None = None
+
+    @computed_field
+    @property
+    def total_cost(self) -> float:
+        return math.fsum(
+            value for field, value in self.__dict__.items() if field.endswith("_cost")
+        )
