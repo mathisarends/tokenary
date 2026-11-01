@@ -24,7 +24,7 @@ oder Umbenennung von `MissingPriceError` einführen.
 | [006](006-explicit-catalog-runtime.md) | — | Eigene Kataloge und entkoppelte Runtime vorhanden | keine | done |
 | [007](007-explicit-generator-output.md) | P2 | Implizites Ausgabeziel absichern | keine | partial |
 | [008](008-provider-model-selection.md) | P1 | Providerfilter und kombinierte Auswahl ergänzt | keine | in_review |
-| [009](009-lazy-bundled-catalog.md) | P1 | Providerdaten und Namenshistorie getrennt laden | 008 | partial |
+| [009](009-lazy-bundled-catalog.md) | P1 | Providerdaten und Namenshistorie getrennt geladen | 008 | in_review |
 | [010](010-public-workflow-verification.md) | P2 | Restfunktionen in Doku und Wheel-Test integrieren | 004, 007, 008, 009 | partial |
 
 Empfohlene Bearbeitungsfolge: **008 → 009 → 004 → 007 → 010**.

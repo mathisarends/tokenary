@@ -1,8 +1,8 @@
 # tokenary
 
 Small Python library for LLM API cost estimates from the LiteLLM pricing catalog.
-The runtime contains a compact, compressed offline catalog instead of thousands
-of generated pricing constructors. It validates and caches only the models used.
+The runtime contains a price-free model index and compressed offline provider
+catalogs. It reads only the providers used and validates/caches individual models.
 No network access is needed when calculating costs.
 
 ## Installation
@@ -22,19 +22,22 @@ result = calculate(model="gpt-4o", input_tokens=1000, output_tokens=500)
 print(result.model_dump())
 ```
 
-Tokenary automatically loads its bundled offline catalog on first use and
-validates only the requested models. Calculations never download prices; they
+Tokenary loads its bundled model index on first use, opens only the requested
+provider file, and validates only the requested models. Repeated lookups reuse
+provider data and validated prices. Calculations never download prices; they
 use the snapshot shipped with the installed version. You can generate a custom
 catalog below when you want newer prices or a selected set of models.
 
 `from tokenary import ModelName` also remains supported, including the existing
-enum member names. This explicitly loads the full model-name enum. Use string IDs
+enum member names. This loads the name index and full enum, without provider prices.
+Use string IDs
 or the generated subset enum when you want to avoid that work. Generated enums
 also provide static model names for IDE completion.
 
-The bundled data file is included in every wheel for offline compatibility.
+The bundled provider files are included in every wheel for offline compatibility.
 Generating a subset avoids loading that data and limits generated code, but does
-not remove the bundled data file from an existing installation.
+not remove the bundled files from an existing installation. Generating from a local
+source reads only the separate naming history, never bundled provider prices.
 
 ### Request objects
 
@@ -243,7 +246,7 @@ uv run python scripts/benchmark_runtime.py
 
 The repository keeps its upstream snapshot at
 `data/model_prices.generated.json`; that full snapshot is not included in wheels.
-Rebuild the bundled compressed catalog from that pinned source with:
+Rebuild the private index/provider resources from that pinned source with:
 
 ```bash
 ./scripts/generate_catalog.sh
@@ -253,24 +256,27 @@ Rebuild the bundled compressed catalog from that pinned source with:
 On Windows, the equivalent command is:
 
 ```powershell
-uv run tokenary-generate --input data/model_prices.generated.json --source https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json --all --output tokenary/data/catalog.json.gz
+uv run python -m tokenary.generator.bundle --input data/model_prices.generated.json --source https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json --output-dir tokenary/data
 ```
 
 Update the upstream snapshot deliberately, then regenerate and review the price
 diff before committing. CI checks that the pinned snapshot and bundled catalog
-agree, alongside tests, lint, formatting and wheel construction.
+agree, alongside tests, lint, formatting and wheel construction. This private
+bundle format replaces `tokenary/data/catalog.json.gz`; public single-file
+JSON/gzip catalogs and generated Python modules keep their existing format.
 An isolated wheel smoke test also runs without development tools or provider SDKs
 to verify subset generation, loading, default compatibility and a runtime source
 size budget. Benchmarks report local medians; they are not timing gates in CI.
 
 ## Size and performance
 
-Compared with the original 0.1.0 wheel, the 0.2 runtime removes roughly 98% of
-installed Python source and 94% of unpacked package bytes. The full offline
-catalog is about 76 KB compressed. A generated module for `gpt-4o` and `o1` from
-the pinned snapshot is 1,552 bytes and does not load the bundled full catalog.
+The provider bundle contains 123 provider files and a price-free index, totaling
+190,119 compressed bytes with the pinned source. Splitting files increases the
+compressed total compared with the former 75,518-byte monolithic snapshot, while
+avoiding decoding unrelated provider prices. A generated module for `gpt-4o` and
+`o1` from the pinned snapshot is 1,552 bytes and reads no bundled provider prices.
 
-Local Windows measurements with Python 3.14 and Pydantic 2.13.4 used isolated
+Historical v0.2.0 measurements, before the provider split, used isolated
 wheel installs, seven fresh processes and 10,000 calls per process:
 
 | Metric | Original 0.1.0 | 0.2 |
@@ -282,6 +288,15 @@ wheel installs, seven fresh processes and 10,000 calls per process:
 
 The added validation, category checks, context tiers and provenance have a cost
 per call. Startup and installation size improve; steady-state billing does more
-work. Use a generated subset to avoid the full default catalog's first-use load,
+work. Use a generated subset to avoid bundled provider data,
 and pass an adapter's validated request directly to `calculate`. These timings
 are illustrative local measurements and vary by Python build and machine.
+
+The provider-split comparison in [ticket 009](tickets/009-lazy-bundled-catalog.md)
+records current medians, ranges, working-set deltas and exact wheel hashes.
+Run `scripts/benchmark_runtime.py --runs 7` against an isolated installed wheel
+to repeat it. Each run starts a fresh process after one unmeasured bytecode warmup;
+each process performs 10,000 calls per repeated-call measurement. Windows working
+set or Linux resident pages are reported when available. Results are local
+observations; the regression tests enforce resource-loading behavior without
+absolute timing limits.

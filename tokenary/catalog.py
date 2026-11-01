@@ -2,6 +2,7 @@
 
 import gzip
 import json
+import re
 from collections.abc import Iterator, Mapping
 from copy import deepcopy
 from dataclasses import dataclass
@@ -15,6 +16,8 @@ from ._serialization import content_hash
 from .pricing import ModelPricing
 
 CATALOG_FORMAT_VERSION = 1
+BUNDLE_FORMAT_VERSION = 1
+PROVIDER_FILENAME = re.compile(r"[a-z0-9-]+-[a-f0-9]{64}\.json\.gz")
 
 
 @dataclass(frozen=True)
@@ -39,6 +42,32 @@ class _LazyPricings(Mapping[str, ModelPricing]):
 
     def __len__(self) -> int:
         return len(self._raw)
+
+
+class _ProviderPricings(Mapping[str, ModelPricing]):
+    def __init__(self, index: dict[str, object]) -> None:
+        self._index = index["model_providers"]
+        self._checksums = index["provider_checksums"]
+        self._providers: dict[str, PricingCatalog] = {}
+        self._validated: dict[str, ModelPricing] = {}
+
+    def __getitem__(self, model: str) -> ModelPricing:
+        if model not in self._validated:
+            filename = self._index[model]
+            if filename not in self._providers:
+                resource = files("tokenary").joinpath("data/providers", filename)
+                catalog = PricingCatalog._from_bytes(resource.read_bytes())
+                if catalog.metadata.catalog_sha256 != self._checksums[filename]:
+                    raise ValueError(f"Bundled provider checksum mismatch: {filename}")
+                self._providers[filename] = catalog
+            self._validated[model] = self._providers[filename].models[model]
+        return self._validated[model]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._index)
+
+    def __len__(self) -> int:
+        return len(self._index)
 
 
 class PricingCatalog:
@@ -120,6 +149,52 @@ class PricingCatalog:
 
 
 @lru_cache(maxsize=1)
+def _get_bundled_index() -> dict[str, object]:
+    resource = files("tokenary").joinpath("data/index.json.gz")
+    payload = json.loads(gzip.decompress(resource.read_bytes()))
+    if payload.get("bundle_format_version") != BUNDLE_FORMAT_VERSION:
+        raise ValueError("Unsupported bundled catalog format version")
+    expected = payload.pop("index_sha256")
+    if content_hash(payload) != expected:
+        raise ValueError("Bundled index checksum does not match its contents")
+    names = payload["enum_names"]
+    providers = payload["model_providers"]
+    checksums = payload["provider_checksums"]
+    if set(names) != set(providers) or set(providers.values()) != set(checksums):
+        raise ValueError("Bundled index model/provider entries do not match")
+    if any(not PROVIDER_FILENAME.fullmatch(name) for name in checksums):
+        raise ValueError("Unsafe bundled provider resource name")
+    make_enum_names(names, names)
+    return payload
+
+
+def get_bundled_enum_names() -> dict[str, str]:
+    """Read naming history without opening any provider prices."""
+    return dict(_get_bundled_index()["enum_names"])
+
+
+@lru_cache(maxsize=1)
+def get_bundled_model_enum() -> type[StrEnum]:
+    return StrEnum(
+        "ModelName",
+        {alias: model for model, alias in get_bundled_enum_names().items()},
+        module="tokenary",
+    )
+
+
+class _BundledCatalog(PricingCatalog):
+    def __init__(self) -> None:
+        index = _get_bundled_index()
+        self._prices = _ProviderPricings(index)
+        self.models = self._prices
+        self.enum_names = dict(index["enum_names"])
+        self.metadata = CatalogMetadata(**index["metadata"])
+
+    @cached_property
+    def model_enum(self) -> type[StrEnum]:
+        return get_bundled_model_enum()
+
+
+@lru_cache(maxsize=1)
 def get_default_catalog() -> PricingCatalog:
-    resource = files("tokenary").joinpath("data/catalog.json.gz")
-    return PricingCatalog._from_bytes(resource.read_bytes())
+    return _BundledCatalog()

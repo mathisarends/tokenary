@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from tokenary._serialization import write_atomic
-from tokenary.catalog import get_default_catalog
+from tokenary.catalog import get_bundled_enum_names
 
 from .downloader import _DEFAULT_PRICE_URL, fetch_model_prices_raw
 from .generator import (
@@ -57,7 +57,7 @@ def main(argv: list[str] | None = None) -> None:
 
         # Preserve the bundled public names, then prefer this output's own history.
         try:
-            previous_names = dict(get_default_catalog().enum_names)
+            previous_names = get_bundled_enum_names()
         except FileNotFoundError:
             previous_names = {}
         previous_names.update(read_existing_enum_names(args.output))
