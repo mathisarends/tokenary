@@ -1,6 +1,6 @@
 # 007 — Implizites Ausgabeziel absichern
 
-- Status: partial
+- Status: in_review
 - Priorität des Rests: P2
 - Bereits umgesetzt: [PR #1](https://github.com/mathisarends/tokenary/pull/1), `facde09`
 - Offene Abhängigkeiten: keine
@@ -29,11 +29,11 @@ reproduziert; keine Nutzerdatei wurde dabei überschrieben.
 
 ## Restauftrag und Akzeptanzkriterien
 
-- [ ] `--output` verpflichtend machen; Migration gegenüber 0.2 dokumentieren.
-- [ ] Fehlendes Ziel sowie Argumentfehler vor Download, Katalogladen und Schreiben abweisen.
-- [ ] Bestehende Formate, `--check`, Modellselektion und atomaren Austausch erhalten.
-- [ ] CLI-Hilfe, README und Hilfsskript konsistent halten.
-- [ ] Simulierten Austauschfehler testen: vorhandenes Ziel bleibt erhalten,
+- [x] `--output` verpflichtend machen; Migration gegenüber 0.2 dokumentieren.
+- [x] Fehlendes Ziel sowie Argumentfehler vor Download, Katalogladen und Schreiben abweisen.
+- [x] Bestehende Formate, `--check`, Modellselektion und atomaren Austausch erhalten.
+- [x] CLI-Hilfe, README und Hilfsskript konsistent halten.
+- [x] Simulierten Austauschfehler testen: vorhandenes Ziel bleibt erhalten,
   temporäre Datei wird entfernt, CLI meldet Fehlercode.
 
 ## Verifikation des Rest-PRs
@@ -41,3 +41,23 @@ reproduziert; keine Nutzerdatei wurde dabei überschrieben.
 Argumentfehler ohne Seiteneffekte und vorhandenes Ziel bei `os.replace`-Fehler testen.
 CLI als Modul und Console Script prüfen. Gesamtsuite ausführen und Ergebnisse
 hier nachtragen. Kein Umbau des existierenden Katalogformats.
+
+## Verifikation der Umsetzung
+
+- `--output` ist in beiden Modi Pflicht. Fehlendes Ziel und ungültige Endung
+  werden vor Download, Namenshistorie oder Schreiben abgewiesen. Bestehende
+  `.py`/`.json`/gzip-Ausgaben, Selektion, Driftprüfung und atomarer Austausch bleiben.
+- Gezielte Vorher-Regression: 3 Fehler/3 Erfolge; fehlendes Ziel und ungültige
+  Endung gelangten noch bis zum gemockten Download.
+- `C:/code/tokenary/.venv/Scripts/python.exe -m pytest --basetemp=.pytest_cache/output-after`:
+  **129 passed** auf Python 3.14.0. Enthält seiteneffektfreie Hilfe/Argumentfehler
+  und simulierten `os.replace`-Fehler mit Zielerhalt und vollständigem Temp-Cleanup.
+- Ruff-Lint/-Format und `git diff --check`: erfolgreich.
+- `uv build --wheel --offline --out-dir dist/after-007`: erfolgreich.
+- Isolierter Offline-Wheel-Smoke mit Python 3.14 erfolgreich, ohne Ruff/SDKs.
+  Console Script und Modulaufruf prüfen `--help` sowie fehlendes `--output`
+  außerhalb des Checkouts. Erfolgreiche Generierung, Drift und Laden ebenfalls geprüft.
+- README beschreibt die Migration: bisher implizites `model_prices.py` muss nun
+  explizit mit `--output model_prices.py` angegeben werden. Das Bundleskript
+  verwendet bereits ein explizites `--output-dir`.
+- Python 3.13/Remote-CI folgen separat. Kein Merge; Stackbasis Ticket 004 / PR #4.

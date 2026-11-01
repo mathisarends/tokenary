@@ -32,13 +32,15 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("model_prices.py"),
-        help=".py/.json/.json.gz",
+        required=True,
+        help="Explicit destination: .py/.json/.json.gz (also required for --check)",
     )
     parser.add_argument(
         "--check", action="store_true", help="Fail on drift; never write output"
     )
     args = parser.parse_args(argv)
+    if args.output.suffix not in {".py", ".json", ".gz"}:
+        parser.error("--output must end in .py, .json, or .json.gz")
     if args.all and (args.models is not None or args.provider is not None):
         parser.error("--all cannot be combined with --models/--model or --provider")
     if not args.all and args.models is None and args.provider is None:

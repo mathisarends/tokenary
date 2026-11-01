@@ -22,7 +22,7 @@ oder Umbenennung von `MissingPriceError` einführen.
 | [004](004-context-price-tiers.md) | P2 | Unbekannte Staffelvarianten abgesichert und Semantik belegt | keine | in_review |
 | [005](005-generator-without-ruff.md) | — | Generator funktioniert ohne Ruff | keine | done |
 | [006](006-explicit-catalog-runtime.md) | — | Eigene Kataloge und entkoppelte Runtime vorhanden | keine | done |
-| [007](007-explicit-generator-output.md) | P2 | Implizites Ausgabeziel absichern | keine | partial |
+| [007](007-explicit-generator-output.md) | P2 | Explizites Ausgabeziel abgesichert | keine | in_review |
 | [008](008-provider-model-selection.md) | P1 | Providerfilter und kombinierte Auswahl ergänzt | keine | in_review |
 | [009](009-lazy-bundled-catalog.md) | P1 | Providerdaten und Namenshistorie getrennt geladen | 008 | in_review |
 | [010](010-public-workflow-verification.md) | P2 | Restfunktionen in Doku und Wheel-Test integrieren | 004, 007, 008, 009 | partial |

@@ -5,7 +5,7 @@
 - Bereits umgesetzt: [PR #1](https://github.com/mathisarends/tokenary/pull/1), `facde09`
 - Offene Abhängigkeiten: keine
 - Branch für Rest: `codex/ticket-004-context-price-tiers`
-- Rest-PR: noch nicht erstellt
+- Rest-PR: [#4](https://github.com/mathisarends/tokenary/pull/4)
 - Ablauf und Nachweise: [Index](README.md), [Prüfbericht](VERIFICATION.md)
 
 ## Bereits erledigt und verifiziert
