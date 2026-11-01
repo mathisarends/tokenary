@@ -14,10 +14,55 @@ from tokenary.catalog import CATALOG_FORMAT_VERSION, PricingCatalog
 from tokenary.pricing import ModelPricing
 
 
+def select_models(
+    raw_prices: Mapping[str, object],
+    *,
+    providers: Iterable[str] | None = None,
+    models: Iterable[str] | None = None,
+) -> dict[str, dict[str, object]]:
+    """Select exact IDs/provider metadata without changing the source mapping."""
+    available = {
+        name: data
+        for name, data in raw_prices.items()
+        if name != "sample_spec" and isinstance(data, dict)
+    }
+    selected = set(available) if models is None else set(models)
+    provider_set = None if providers is None else set(providers)
+    if not selected:
+        raise ValueError("Select at least one model")
+    if provider_set == set():
+        raise ValueError("Select at least one provider")
+    errors = []
+    missing = selected - available.keys()
+    if missing:
+        errors.append(f"Unknown models: {', '.join(sorted(missing))}")
+    if provider_set is not None:
+        known = {
+            data["litellm_provider"]
+            for data in available.values()
+            if isinstance(data.get("litellm_provider"), str)
+        }
+        unknown = provider_set - known
+        if unknown:
+            errors.append(f"Unknown providers: {', '.join(sorted(unknown))}")
+    if errors:
+        raise ValueError("; ".join(errors))
+    if provider_set is not None:
+        selected = {
+            name
+            for name in selected
+            if available[name].get("litellm_provider") in provider_set
+        }
+    if not selected:
+        raise ValueError("No models match the provider/model selection")
+    return {name: available[name] for name in sorted(selected)}
+
+
 def build_catalog_payload(
     raw_prices: Mapping[str, object],
     *,
     models: Iterable[str] | None = None,
+    providers: Iterable[str] | None = None,
     source: str = "custom",
     previous_names: Mapping[str, str] | None = None,
 ) -> dict[str, object]:
@@ -26,12 +71,7 @@ def build_catalog_payload(
         for name, data in raw_prices.items()
         if name != "sample_spec" and isinstance(data, dict)
     }
-    selected = set(available) if models is None else set(models)
-    missing = selected - available.keys()
-    if missing:
-        raise ValueError(f"Unknown models: {', '.join(sorted(missing))}")
-    if not selected:
-        raise ValueError("Select at least one model")
+    selected = select_models(raw_prices, models=models, providers=providers)
 
     # Resolve against the entire source before filtering so subset names agree.
     all_names = make_enum_names(available, previous_names)
@@ -94,12 +134,17 @@ def render_python_catalog(
     raw_prices: Mapping[str, object],
     *,
     models: Iterable[str] | None = None,
+    providers: Iterable[str] | None = None,
     source: str = "custom",
     previous_names: Mapping[str, str] | None = None,
 ) -> str:
     return _render_payload_as_python(
         build_catalog_payload(
-            raw_prices, models=models, source=source, previous_names=previous_names
+            raw_prices,
+            models=models,
+            providers=providers,
+            source=source,
+            previous_names=previous_names,
         )
     )
 
@@ -166,12 +211,17 @@ def write_python_catalog_file(
     output_path: str | Path,
     *,
     models: Iterable[str] | None = None,
+    providers: Iterable[str] | None = None,
     source: str = "custom",
     previous_names: Mapping[str, str] | None = None,
 ) -> Path:
     previous = dict(previous_names or {})
     previous.update(read_existing_enum_names(output_path))
     rendered = render_python_catalog(
-        raw_prices, models=models, source=source, previous_names=previous
+        raw_prices,
+        models=models,
+        providers=providers,
+        source=source,
+        previous_names=previous,
     )
     return write_atomic(output_path, rendered.encode("utf-8"))
