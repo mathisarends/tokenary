@@ -5,9 +5,11 @@ Abgleich am 01.11.2026 gegen `facde09` (v0.2.0), den Merge von
 Codeprüfung, 86 bestandenen Tests und einem erfolgreichen isolierten Wheel-Test
 aktualisiert. Einzelheiten und Grenzen stehen im [Prüfbericht](VERIFICATION.md).
 
-**Fünf Tickets sind durch PR #1 erledigt; die fünf Restarbeiten sind als PR-Stack
-umgesetzt und in Review.** `done` bedeutet tatsächlich gemergt und verifiziert.
-`in_review` bedeutet implementiert und geprüft, aber noch nicht gemergt.
+**Alle zehn Tickets sind erledigt.** Fünf wurden durch PR #1 abgeschlossen;
+die fünf Restarbeiten wurden als PR-Stack #2 → #3 → #4 → #5 → #6 umgesetzt,
+verifiziert und am 01.11.2026 nach ausdrücklichem Mergeauftrag nach `main` gemergt.
+Alle fünf zugehörigen Remote-Branches sind gelöscht. `done` bedeutet tatsächlich
+gemergt und verifiziert.
 Die Abschnitte „Restbefund“ dokumentieren den Ausgangszustand vor den neuen PRs;
 die jeweiligen Verifikationsabschnitte beschreiben die abgeschlossene Umsetzung.
 Die ursprünglichen Architekturvorschläge sind durch die tatsächlich vorhandene
@@ -21,25 +23,24 @@ oder Umbenennung von `MissingPriceError` einführen.
 | [001](001-usage-validation.md) | Verbrauchswerte validiert | done | [#1](https://github.com/mathisarends/tokenary/pull/1) |
 | [002](002-zero-reasoning-rate.md) | Reasoningpreis null korrekt | done | [#1](https://github.com/mathisarends/tokenary/pull/1) |
 | [003](003-missing-pricing.md) | Fehlende Preise explizit gemeldet | done | [#1](https://github.com/mathisarends/tokenary/pull/1) |
-| [004](004-context-price-tiers.md) | Unbekannte Staffelvarianten abgesichert, Semantik belegt | in_review | [#4](https://github.com/mathisarends/tokenary/pull/4) |
+| [004](004-context-price-tiers.md) | Unbekannte Staffelvarianten abgesichert, Semantik belegt | done | [#4](https://github.com/mathisarends/tokenary/pull/4) |
 | [005](005-generator-without-ruff.md) | Generator ohne Ruff | done | [#1](https://github.com/mathisarends/tokenary/pull/1) |
 | [006](006-explicit-catalog-runtime.md) | Eigene Kataloge und entkoppelte Runtime | done | [#1](https://github.com/mathisarends/tokenary/pull/1) |
-| [007](007-explicit-generator-output.md) | Explizites Ausgabeziel abgesichert | in_review | [#5](https://github.com/mathisarends/tokenary/pull/5) |
-| [008](008-provider-model-selection.md) | Providerfilter und kombinierte Auswahl | in_review | [#2](https://github.com/mathisarends/tokenary/pull/2) |
-| [009](009-lazy-bundled-catalog.md) | Providerdaten und Namenshistorie getrennt geladen | in_review | [#3](https://github.com/mathisarends/tokenary/pull/3) |
-| [010](010-public-workflow-verification.md) | Doku, Beispiele und installierter Workflow integriert | in_review | [#6](https://github.com/mathisarends/tokenary/pull/6) |
+| [007](007-explicit-generator-output.md) | Explizites Ausgabeziel abgesichert | done | [#5](https://github.com/mathisarends/tokenary/pull/5) |
+| [008](008-provider-model-selection.md) | Providerfilter und kombinierte Auswahl | done | [#2](https://github.com/mathisarends/tokenary/pull/2) |
+| [009](009-lazy-bundled-catalog.md) | Providerdaten und Namenshistorie getrennt geladen | done | [#3](https://github.com/mathisarends/tokenary/pull/3) |
+| [010](010-public-workflow-verification.md) | Doku, Beispiele und installierter Workflow integriert | done | [#6](https://github.com/mathisarends/tokenary/pull/6) |
 
-Empfohlene Bearbeitungsfolge: **008 → 009 → 004 → 007 → 010**.
-Auf ausdrücklichen Nutzerauftrag vom 01.11.2026 werden diese Rest-PRs seriell
-als Stack gebaut: 008 gegen `main`, jeder weitere gegen den vorherigen Branch.
-Die Vorgaben „gegen main“ und „erst nach Merge beginnen“ gelten für diesen Stack
-entsprechend erst nach dem Retargeting. Kein automatischer Merge; die Status
-bleiben bis zum tatsächlichen Merge `in_review`. CI prüft auch gestapelte PRs.
+Umsetzungs- und Mergereihenfolge: **008 → 009 → 004 → 007 → 010**.
+Auf ausdrücklichen Nutzerauftrag wurden diese Rest-PRs seriell als Stack gebaut:
+008 gegen `main`, jeder weitere zunächst gegen den vorherigen Branch.
+Vor dem jeweiligen Merge wurden die PRs auf `main` umgestellt. Merge-Commits
+erhalten die Stackhistorie. Die Remote-Branches wurden erst nach bestätigtem Merge
+und Umstellung der Nachfolger gelöscht. CI prüft auch gestapelte PRs.
 Alle fünf PRs sind auf Python 3.13 und 3.14 grün; konkrete Commit-/Run-Links und
 die lokale Verifikation stehen in [Ticket 010](010-public-workflow-verification.md).
-Der Modellfilter und die explizite Katalogverwendung existieren bereits; 008 muss
-nicht auf einen erneuten Bau dieser Funktionen warten. Erledigte Voraussetzungen
-aus PR #1 gelten als erfüllt. Keine PRs nur zum Wiederholen erledigter Tickets.
+Der vorhandene Modellfilter und die explizite Katalogverwendung aus PR #1 wurden
+weiterverwendet. Es wurden keine PRs zum Wiederholen erledigter Tickets erstellt.
 
 ## Ablauf für Agents
 
