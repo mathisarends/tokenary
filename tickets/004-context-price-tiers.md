@@ -1,6 +1,6 @@
 # 004 — Staffelvarianten absichern und Semantik belegen
 
-- Status: in_review
+- Status: done
 - Priorität des Rests: P2
 - Bereits umgesetzt: [PR #1](https://github.com/mathisarends/tokenary/pull/1), `facde09`
 - Offene Abhängigkeiten: keine
@@ -87,3 +87,9 @@ enthalten. Kein Merge durchgeführt; Stackbasis ist Ticket 009 / PR #3.
 Nachtrag: [GitHub-CI](https://github.com/mathisarends/tokenary/actions/runs/41288243413)
 besteht vollständig auf Python 3.13 und 3.14. Abschließender Stack-/Wheel-Nachweis:
 [Ticket 010](010-public-workflow-verification.md).
+
+
+## Tatsächlicher Mergeabschluss
+
+Am 01.11.2026 nach main gemergt; bestätigter Merge-Commit: `6327c92c1d24f70a672226166207f8f121a046b8`.
+Der zugehörige Remote-Branch ist gelöscht. Gesamtnachweis: [Ticket 010](010-public-workflow-verification.md).

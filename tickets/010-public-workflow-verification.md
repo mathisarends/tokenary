@@ -1,9 +1,9 @@
 # 010 — Restfunktionen in Doku und Wheel-Test integrieren
 
-- Status: in_review
+- Status: done
 - Priorität des Rests: P2
 - Bereits umgesetzt: [PR #1](https://github.com/mathisarends/tokenary/pull/1), `facde09`
-- Offene Abhängigkeiten: 004, 007, 008, 009
+- Offene Abhängigkeiten: keine (004, 007, 008, 009 erledigt)
 - Branch für Rest: `codex/ticket-010-workflow-verification`
 - Rest-PR: [#6](https://github.com/mathisarends/tokenary/pull/6)
 - Ablauf und Nachweise: [Index](README.md), [Prüfbericht](VERIFICATION.md)
@@ -92,5 +92,25 @@ Jeweils beide Jobs `test (3.13)` und `test (3.14)` vollständig erfolgreich:
 Run 41288815458 ist für beide Pythonversionen vollständig erfolgreich,
 inklusive aller Beispiele und des erweiterten installierten Wheel-Workflows.
 Die anschließende Änderung ergänzt ausschließlich PR-/CI-Referenzen in Dokumenten.
-Alle fünf neuen PRs sind offen und nicht gemergt; die Branchbasen wurden über
-GitHub geprüft: `main` → 008 → 009 → 004 → 007 → 010.
+Bei Abschluss der PR-Erstellung waren alle fünf PRs offen; die ursprünglichen
+Branchbasen wurden über GitHub geprüft: `main` → 008 → 009 → 004 → 007 → 010.
+
+## Tatsächlicher Mergeabschluss am 01.11.2026
+
+Nach ausdrücklichem Nutzerauftrag sind alle Rest-PRs in Abhängigkeitsreihenfolge
+nach `main` gemergt. PRs #2 und #3 waren bereits durch den Nutzer gemergt;
+danach folgten #4, #5 und #6. Die geprüften PR-Heads wurden per SHA abgesichert,
+die Nachfolger vor dem Merge auf `main` umgestellt.
+
+| Ticket / PR | Bestätigter Merge-Commit |
+| --- | --- |
+| 008 / [#2](https://github.com/mathisarends/tokenary/pull/2) | `d753395f65f754aedcdeb18559322ff214b8649d` |
+| 009 / [#3](https://github.com/mathisarends/tokenary/pull/3) | `3eea092e61175d19937133e1a509b6eee52f6f3a` |
+| 004 / [#4](https://github.com/mathisarends/tokenary/pull/4) | `6327c92c1d24f70a672226166207f8f121a046b8` |
+| 007 / [#5](https://github.com/mathisarends/tokenary/pull/5) | `303c376baf9e66e16491d21b8253bf217f3d354d` |
+| 010 / [#6](https://github.com/mathisarends/tokenary/pull/6) | `673e28564da40968e7bf116a6c59db27131b37a0` |
+
+Alle fünf Remote-Branches sind entfernt, geprüft mit `git ls-remote --heads`.
+Der Baum von `673e285` entspricht exakt dem vollständig geprüften Stack-Head
+`ed94816`; `git diff --exit-code ed94816 origin/main -- .` bestätigt dies.
+Die fremde Änderung an `uv.lock` im ursprünglichen Checkout bleibt erhalten.

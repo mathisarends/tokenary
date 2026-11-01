@@ -1,9 +1,9 @@
 # 009 — Providerdaten und Namenshistorie getrennt laden
 
-- Status: in_review
+- Status: done
 - Priorität des Rests: P1
 - Bereits umgesetzt: [PR #1](https://github.com/mathisarends/tokenary/pull/1), `facde09`
-- Offene Abhängigkeiten: 008
+- Offene Abhängigkeiten: keine (008 erledigt)
 - Branch für Rest: `codex/ticket-009-lazy-bundled-catalog`
 - Rest-PR: [#3](https://github.com/mathisarends/tokenary/pull/3)
 - Ablauf und Nachweise: [Index](README.md), [Prüfbericht](VERIFICATION.md)
@@ -101,3 +101,9 @@ Der Ressourcenvertrag wird ohne absolute Zeitgrenzen getestet. Kein Merge erfolg
 Nachtrag: [GitHub-CI](https://github.com/mathisarends/tokenary/actions/runs/41287988834)
 besteht vollständig auf Python 3.13 und 3.14. Abschließender Stack-/Wheel-Nachweis:
 [Ticket 010](010-public-workflow-verification.md).
+
+
+## Tatsächlicher Mergeabschluss
+
+Am 01.11.2026 nach main gemergt; bestätigter Merge-Commit: `3eea092e61175d19937133e1a509b6eee52f6f3a`.
+Der zugehörige Remote-Branch ist gelöscht. Gesamtnachweis: [Ticket 010](010-public-workflow-verification.md).

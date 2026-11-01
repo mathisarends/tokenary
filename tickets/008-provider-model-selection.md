@@ -1,6 +1,6 @@
 # 008 — Providerfilter und kombinierte Auswahl ergänzen
 
-- Status: in_review
+- Status: done
 - Priorität des Rests: P1
 - Bereits umgesetzt: [PR #1](https://github.com/mathisarends/tokenary/pull/1), `facde09`
 - Offene Abhängigkeiten: keine
@@ -62,3 +62,9 @@ Befehle und Ergebnisse im Ticket nachtragen.
 Nachtrag: [GitHub-CI](https://github.com/mathisarends/tokenary/actions/runs/41287495737)
 besteht vollständig auf Python 3.13 und 3.14. Abschließender Stack-/Wheel-Nachweis:
 [Ticket 010](010-public-workflow-verification.md).
+
+
+## Tatsächlicher Mergeabschluss
+
+Am 01.11.2026 nach main gemergt; bestätigter Merge-Commit: `d753395f65f754aedcdeb18559322ff214b8649d`.
+Der zugehörige Remote-Branch ist gelöscht. Gesamtnachweis: [Ticket 010](010-public-workflow-verification.md).
