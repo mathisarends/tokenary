@@ -7,11 +7,14 @@ from .usage import from_anthropic_usage, from_openai_usage
 from .views import CostBreakdown, UsageCostRequest
 
 if TYPE_CHECKING:
+    from .live import LivePricingCatalog
+
     ModelName: Any
 
 __all__ = [
     "CatalogMetadata",
     "CostBreakdown",
+    "LivePricingCatalog",
     "ModelName",
     "MissingPriceError",
     "PricingCatalog",
@@ -24,6 +27,11 @@ __all__ = [
 
 
 def __getattr__(name: str) -> object:
+    if name == "LivePricingCatalog":
+        from .live import LivePricingCatalog
+
+        globals()[name] = LivePricingCatalog
+        return LivePricingCatalog
     if name == "ModelName":
         from .catalog import get_bundled_model_enum
 

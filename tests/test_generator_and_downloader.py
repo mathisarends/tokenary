@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-import json
+import asyncio
+from unittest.mock import AsyncMock
 
+import httpx2
 import pytest
+from pydantic import ValidationError
 
 from tokenary import calculate
 from tokenary.generator.downloader import (
@@ -15,47 +18,76 @@ from tokenary.generator.generator import (
 )
 
 
-class _FakeResponse:
-    def __init__(self, payload: str) -> None:
-        self._payload = payload
+def test_fetch_model_prices_raw_returns_typed_json_object() -> None:
+    async def run():
+        def handle(request):
+            assert request.url == "https://example.test/prices.json"
+            assert request.extensions["timeout"]["read"] == 30
+            return httpx2.Response(200, json={"my-model": {"mode": "chat"}})
 
-    def read(self) -> bytes:
-        return self._payload.encode("utf-8")
+        async with httpx2.AsyncClient(transport=httpx2.MockTransport(handle)) as client:
+            result = await fetch_model_prices_raw(
+                url="https://example.test/prices.json", client=client
+            )
+            assert result == {"my-model": {"mode": "chat"}}
 
-    def __enter__(self) -> _FakeResponse:
-        return self
-
-    def __exit__(self, exc_type, exc, tb) -> None:
-        return None
-
-
-def test_fetch_model_prices_raw_returns_json_object(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    payload = json.dumps({"sample_spec": {}, "my-model": {"mode": "chat"}})
-
-    def fake_urlopen(request, timeout=30):
-        assert timeout == 30
-        assert request.full_url == "https://example.test/prices.json"
-        return _FakeResponse(payload)
-
-    monkeypatch.setattr("tokenary.generator.downloader.urlopen", fake_urlopen)
-
-    result = fetch_model_prices_raw(url="https://example.test/prices.json")
-
-    assert result["my-model"]["mode"] == "chat"
+    asyncio.run(run())
 
 
-def test_fetch_model_prices_raw_rejects_non_object(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def fake_urlopen(request, timeout=30):
-        return _FakeResponse("[]")
+@pytest.mark.parametrize("content", [b"[]", b"invalid json"])
+def test_fetch_model_prices_raw_rejects_bad_payload(content) -> None:
+    async def run():
+        async with httpx2.AsyncClient(
+            transport=httpx2.MockTransport(
+                lambda r: httpx2.Response(200, content=content)
+            )
+        ) as client:
+            with pytest.raises(ValidationError):
+                await fetch_model_prices_raw(client=client)
 
-    monkeypatch.setattr("tokenary.generator.downloader.urlopen", fake_urlopen)
+    asyncio.run(run())
 
-    with pytest.raises(ValueError, match="not a JSON object"):
-        fetch_model_prices_raw(url="https://example.test/prices.json")
+
+def test_fetch_model_prices_raw_checks_http_status() -> None:
+    async def run():
+        async with httpx2.AsyncClient(
+            transport=httpx2.MockTransport(lambda r: httpx2.Response(503))
+        ) as client:
+            with pytest.raises(httpx2.HTTPStatusError):
+                await fetch_model_prices_raw(client=client)
+
+    asyncio.run(run())
+
+
+def test_cli_awaits_downloader(tmp_path, monkeypatch):
+    from tokenary.generator.__main__ import main
+
+    fetch = AsyncMock(return_value={"own-model": {"input_cost_per_token": 0.25}})
+    monkeypatch.setattr("tokenary.generator.__main__.fetch_model_prices_raw", fetch)
+    output = tmp_path / "prices.json"
+    main(
+        ["--url", "https://example.test/prices.json", "--all", "--output", str(output)]
+    )
+    fetch.assert_awaited_once_with(url="https://example.test/prices.json")
+    from tokenary import PricingCatalog
+
+    assert (
+        PricingCatalog.from_file(output).models["own-model"].input_cost_per_token
+        == 0.25
+    )
+
+
+def test_cli_reports_network_errors(tmp_path, monkeypatch, capsys):
+    from tokenary.generator.__main__ import main
+
+    fetch = AsyncMock(side_effect=httpx2.ConnectError("offline"))
+    monkeypatch.setattr("tokenary.generator.__main__.fetch_model_prices_raw", fetch)
+    output = tmp_path / "prices.json"
+    with pytest.raises(SystemExit) as exc:
+        main(["--all", "--output", str(output)])
+    assert exc.value.code == 1
+    assert "Generation failed: offline" in capsys.readouterr().err
+    assert not output.exists()
 
 
 def test_write_raw_prices_file_creates_missing_parent_dirs(tmp_path) -> None:
