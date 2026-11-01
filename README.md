@@ -131,6 +131,14 @@ print(catalog.metadata.source_sha256)
 Plain `.json` output is supported too. A selected catalog is explicit per call;
 loading it never mutates the installed package or changes a global default.
 
+For an entirely offline example, run `python examples/custom_catalog.py` from an
+installed checkout. It writes a small local fixture, generates provider-only,
+model-only and combined JSON/gzip catalogs in a temporary directory, then passes
+each catalog explicitly to `calculate`. Its new model ID is independent of the
+bundled snapshot. Non-selected IDs raise `KeyError` in that catalog; invalid
+usage raises Pydantic `ValidationError`, and missing supported rates raise
+`MissingPriceError`. Generation does not change what a default calculation uses.
+
 ## Supported usage parameters
 
 | Parameter | Type | Meaning |
@@ -269,6 +277,7 @@ uv run ruff check .
 uv run ruff format --check .
 uv build --wheel
 uv run python scripts/benchmark_runtime.py
+uv run python examples/custom_catalog.py
 ```
 
 The repository keeps its upstream snapshot at
@@ -292,8 +301,18 @@ agree, alongside tests, lint, formatting and wheel construction. This private
 bundle format replaces `tokenary/data/catalog.json.gz`; public single-file
 JSON/gzip catalogs and generated Python modules keep their existing format.
 An isolated wheel smoke test also runs without development tools or provider SDKs
-to verify subset generation, loading, default compatibility and a runtime source
-size budget. Benchmarks report local medians; they are not timing gates in CI.
+outside the checkout. It exercises both installed CLI entries, provider/model
+selection, all three output formats, new model IDs, excluded-model failures,
+read/validation caches, default compatibility and a runtime source-size budget.
+CI runs these checks and every example on Python 3.13 and 3.14. After building a
+wheel, reproduce the smoke test from a directory outside the checkout:
+
+```bash
+uv run --isolated --no-project --python 3.14 --with /absolute/path/to/tokenary/dist/tokenary-0.2.0-py3-none-any.whl python -I /absolute/path/to/tokenary/scripts/smoke_installed.py
+```
+
+The wheel environment includes only runtime dependencies; the fixture stays
+offline and needs no provider SDK or Ruff. Benchmarks are not timing gates in CI.
 
 ## Size and performance
 
