@@ -57,3 +57,8 @@ Befehle und Ergebnisse im Ticket nachtragen.
 - Python 3.13/Remote-CI sind in diesem lokalen Nachweis noch nicht ausgeführt.
 - Stack auf ausdrücklichen Nutzerauftrag; CI akzeptiert deshalb alle PR-Zielbranches.
   Kein Merge behauptet oder durchgeführt.
+
+
+Nachtrag: [GitHub-CI](https://github.com/mathisarends/tokenary/actions/runs/41287495737)
+besteht vollständig auf Python 3.13 und 3.14. Abschließender Stack-/Wheel-Nachweis:
+[Ticket 010](010-public-workflow-verification.md).

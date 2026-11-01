@@ -27,7 +27,7 @@ oder Umbenennung von `MissingPriceError` einführen.
 | [007](007-explicit-generator-output.md) | Explizites Ausgabeziel abgesichert | in_review | [#5](https://github.com/mathisarends/tokenary/pull/5) |
 | [008](008-provider-model-selection.md) | Providerfilter und kombinierte Auswahl | in_review | [#2](https://github.com/mathisarends/tokenary/pull/2) |
 | [009](009-lazy-bundled-catalog.md) | Providerdaten und Namenshistorie getrennt geladen | in_review | [#3](https://github.com/mathisarends/tokenary/pull/3) |
-| [010](010-public-workflow-verification.md) | Doku, Beispiele und installierter Workflow integriert | in_review | wird nach Erstellung ergänzt |
+| [010](010-public-workflow-verification.md) | Doku, Beispiele und installierter Workflow integriert | in_review | [#6](https://github.com/mathisarends/tokenary/pull/6) |
 
 Empfohlene Bearbeitungsfolge: **008 → 009 → 004 → 007 → 010**.
 Auf ausdrücklichen Nutzerauftrag vom 01.11.2026 werden diese Rest-PRs seriell
@@ -35,6 +35,8 @@ als Stack gebaut: 008 gegen `main`, jeder weitere gegen den vorherigen Branch.
 Die Vorgaben „gegen main“ und „erst nach Merge beginnen“ gelten für diesen Stack
 entsprechend erst nach dem Retargeting. Kein automatischer Merge; die Status
 bleiben bis zum tatsächlichen Merge `in_review`. CI prüft auch gestapelte PRs.
+Alle fünf PRs sind auf Python 3.13 und 3.14 grün; konkrete Commit-/Run-Links und
+die lokale Verifikation stehen in [Ticket 010](010-public-workflow-verification.md).
 Der Modellfilter und die explizite Katalogverwendung existieren bereits; 008 muss
 nicht auf einen erneuten Bau dieser Funktionen warten. Erledigte Voraussetzungen
 aus PR #1 gelten als erfüllt. Keine PRs nur zum Wiederholen erledigter Tickets.

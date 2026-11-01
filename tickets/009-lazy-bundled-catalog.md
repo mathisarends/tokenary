@@ -96,3 +96,8 @@ Keine allgemeine Geschwindigkeitszusage: starke Streuung, in diesem Lauf schlech
 Import-/Warm-Mediane. Die Struktur vermeidet nachweisbar fremde Providerdaten.
 Dafür steigt die komprimierte Gesamtdatenmenge von 75.518 auf 190.119 B.
 Der Ressourcenvertrag wird ohne absolute Zeitgrenzen getestet. Kein Merge erfolgt.
+
+
+Nachtrag: [GitHub-CI](https://github.com/mathisarends/tokenary/actions/runs/41287988834)
+besteht vollständig auf Python 3.13 und 3.14. Abschließender Stack-/Wheel-Nachweis:
+[Ticket 010](010-public-workflow-verification.md).

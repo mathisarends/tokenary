@@ -82,3 +82,8 @@ Befehle, Ergebnisse und Quellen hier im PR nachtragen.
 Tests sind kleine Offline-Fixtures und brauchen keine dieser Seiten oder Livepreise.
 Python 3.13 und Remote-CI sind im lokalen Nachweis dieses Tickets noch nicht
 enthalten. Kein Merge durchgeführt; Stackbasis ist Ticket 009 / PR #3.
+
+
+Nachtrag: [GitHub-CI](https://github.com/mathisarends/tokenary/actions/runs/41288243413)
+besteht vollständig auf Python 3.13 und 3.14. Abschließender Stack-/Wheel-Nachweis:
+[Ticket 010](010-public-workflow-verification.md).

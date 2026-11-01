@@ -5,7 +5,7 @@
 - Bereits umgesetzt: [PR #1](https://github.com/mathisarends/tokenary/pull/1), `facde09`
 - Offene Abhängigkeiten: 004, 007, 008, 009
 - Branch für Rest: `codex/ticket-010-workflow-verification`
-- Rest-PR: noch nicht erstellt
+- Rest-PR: [#6](https://github.com/mathisarends/tokenary/pull/6)
 - Ablauf und Nachweise: [Index](README.md), [Prüfbericht](VERIFICATION.md)
 
 ## Bereits erledigt und verifiziert
@@ -35,7 +35,7 @@ allen entsprechenden Wheel-Integrationspfaden.
 - [x] Nicht ausgewählte Modelle ablehnen; keine gebündelten Preise bei eigener Nutzung laden.
 - [x] Installiertes Console Script und Modulaufruf abdecken.
 - [x] Ressourcen-Ladegarantien aus 009 im integrierten Workflow absichern.
-- [ ] Aktualisierte Suite und Wheel-Smoke auf beiden CI-Pythonversionen nachweisen.
+- [x] Aktualisierte Suite und Wheel-Smoke auf beiden CI-Pythonversionen nachweisen.
 - [x] Messbedingungen und Performancegrenzen ehrlich dokumentieren; den jeweiligen
   Code-Stand der gemessenen Wheel-Version angeben.
 - [x] Ticketindex mit tatsächlichen Rest-PRs und Merge-Status aktualisieren.
@@ -88,4 +88,10 @@ Jeweils beide Jobs `test (3.13)` und `test (3.14)` vollständig erfolgreich:
 | 004 / #4 | `7712f7f` | [Run 41288243413](https://github.com/mathisarends/tokenary/actions/runs/41288243413) |
 | 007 / #5 | `70c5646` | [Run 41288347352](https://github.com/mathisarends/tokenary/actions/runs/41288347352) |
 
-Die CI-Referenz dieses abschließenden PRs wird nach dem tatsächlichen Lauf ergänzt.
+| 010 / #6 | `1de0b32` | [Run 41288815458](https://github.com/mathisarends/tokenary/actions/runs/41288815458) |
+
+Run 41288815458 ist für beide Pythonversionen vollständig erfolgreich,
+inklusive aller Beispiele und des erweiterten installierten Wheel-Workflows.
+Die anschließende Änderung ergänzt ausschließlich PR-/CI-Referenzen in Dokumenten.
+Alle fünf neuen PRs sind offen und nicht gemergt; die Branchbasen wurden über
+GitHub geprüft: `main` → 008 → 009 → 004 → 007 → 010.
