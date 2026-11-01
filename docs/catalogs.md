@@ -120,5 +120,8 @@ Regeneration preserves existing output enum names, including collisions. New
 collisions receive a deterministic hash suffix instead of renumbering old names.
 Subset names are resolved against the full source and the bundled name history.
 Generation and runtime use `tokenary.pricing.ModelPricing` directly.
-Only provider, mode and price fields are included; upstream capability and context
-metadata is kept in the source snapshot instead of copied into every installation.
+Outputs include price fields, provider, mode and the supported
+[model metadata](model-metadata.md), including token limits and capabilities.
+Additional upstream `supports_*` and `supported_*` fields are retained as data;
+unrelated source annotations are omitted. Metadata participates in catalog
+checksums and is available through `CATALOG.models["model-id"]`.

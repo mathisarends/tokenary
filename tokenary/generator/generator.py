@@ -81,9 +81,11 @@ def build_catalog_payload(
         data = {
             key: value
             for key, value in available[name].items()
-            if key in {"litellm_provider", "mode"} or "cost" in key
+            if key in ModelPricing.model_fields
+            or "cost" in key
+            or key.startswith(("supports_", "supported_"))
         }
-        # Keep unknown upstream price fields, but validate the shared known fields.
+        # Retain future price/capability fields while validating known shared fields.
         ModelPricing.model_validate(data)
         prices[name] = data
 

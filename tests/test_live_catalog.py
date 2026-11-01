@@ -131,6 +131,35 @@ async def test_provider_and_model_filters_and_forced_refresh(remote):
         assert remote.calls == 2
 
 
+async def test_metadata_refresh_and_disk_cache_preserve_snapshots(remote, tmp_path):
+    remote.prices["new-model"].update(
+        max_input_tokens=4096,
+        supports_function_calling=False,
+        reasoning_effort_levels=["low"],
+    )
+    settings = dict(
+        models=["new-model"], cache_path=tmp_path / "prices.json", client=remote.client
+    )
+    async with LivePricingCatalog(**settings) as live:
+        old = await live.get_catalog()
+        info = old.models["new-model"]
+        assert info.max_input_tokens == 4096
+        assert info.supports_function_calling is False
+        remote.prices["new-model"]["max_input_tokens"] = 8192
+        remote.prices["new-model"]["reasoning_effort_levels"].append("high")
+        current = await live.get_catalog(force_refresh=True)
+        assert current.models["new-model"].max_input_tokens == 8192
+        assert info.max_input_tokens == 4096
+        assert info.reasoning_effort_levels == ("low",)
+        assert old.metadata.catalog_sha256 != current.metadata.catalog_sha256
+    async with LivePricingCatalog(**settings) as restarted:
+        cached = (await restarted.get_catalog()).models["new-model"]
+        assert cached.max_input_tokens == 8192
+        assert cached.reasoning_effort_levels == ("low", "high")
+        assert cached.supports_function_calling is False
+        assert remote.calls == 2
+
+
 async def test_stale_fallback_backoff_and_recovery(remote, clock):
     async with LivePricingCatalog(
         models=["new-model"],

@@ -30,6 +30,7 @@ def raw_prices():
             "litellm_provider": "openai",
             "max_input_tokens": 128000,
             "supports_vision": True,
+            "comment": "Source-only annotation",
         },
         "unused": {"output_cost_per_token": 1},
         "provider/model-a": {"input_cost_per_token": 0.1},
@@ -44,8 +45,9 @@ def test_selected_output_only_contains_requested_prices_and_relevant_data(raw_pr
     pricing = payload["models"]["gpt-4o"]
     assert pricing["cache_read_input_token_cost"] == 1.25e-6
     assert pricing["future_cost_per_widget"] == 0.2
-    assert "max_input_tokens" not in pricing
-    assert "supports_vision" not in pricing
+    assert pricing["max_input_tokens"] == 128000
+    assert pricing["supports_vision"] is True
+    assert "comment" not in pricing
     assert payload["metadata"]["source_sha256"] == content_hash(raw_prices)
 
 

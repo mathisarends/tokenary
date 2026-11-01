@@ -22,6 +22,9 @@ async def main():
 
 ## Application lifecycle
 
+Refreshes also update [model metadata](model-metadata.md). Inspect
+`catalog.models["gpt-4o"]` for limits and capabilities from that same snapshot.
+
 In a server, keep the manager in your application lifespan and call
 `await prices.get_catalog()` in request handlers. Optionally warm it at startup.
 For a batch or billing run, acquire one catalog and reuse it throughout the run.

@@ -71,7 +71,7 @@ Path.read_bytes = read
 import tokenary
 import tokenary.pricing
 import tokenary.generator.generator
-from tokenary.catalog import get_default_catalog
+from tokenary import get_default_catalog
 from tokenary.pricing import ModelPricing
 validations = []
 validate = ModelPricing.model_validate
@@ -87,10 +87,13 @@ assert len(reads) == 1 and reads[0].endswith('index.json.gz')
 assert get_default_catalog.cache_info().currsize == 0
 assert validations == []
 
-tokenary.calculate(model='gpt-4o', input_tokens=1)
+info = get_default_catalog().models['gpt-4o']
+assert info.max_input_tokens > 0
+assert info.supports_function_calling is True
 assert len(reads) == 2 and '/providers/' in reads[-1]
 assert len(validations) == 1
 first = reads[-1]
+tokenary.calculate(model='gpt-4o', input_tokens=1)
 tokenary.calculate(model='gpt-4o', input_tokens=2)
 assert len(reads) == 2 and len(validations) == 1
 tokenary.calculate(model='o1', input_tokens=1)
