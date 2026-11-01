@@ -46,6 +46,24 @@ def main() -> None:
     with TemporaryDirectory(prefix="tokenary-wheel-smoke-") as directory:
         root = Path(directory).resolve()
         assert root.parent == Path(gettempdir()).resolve()
+        console = Path(sys.executable).with_name(
+            "tokenary-generate.exe" if sys.platform == "win32" else "tokenary-generate"
+        )
+        assert console.is_file(), console
+        for entry in (
+            [str(console)],
+            [sys.executable, "-I", "-m", "tokenary.generator"],
+        ):
+            help_result = subprocess.run(
+                [*entry, "--help"], cwd=root, capture_output=True, text=True
+            )
+            assert help_result.returncode == 0, help_result.stderr
+            missing_output = subprocess.run(
+                [*entry, "--all"], cwd=root, capture_output=True, text=True
+            )
+            assert missing_output.returncode == 2, missing_output.stderr
+            assert "--output" in missing_output.stderr
+            assert list(root.iterdir()) == []
         source = root / "source.json"
         source.write_text(
             json.dumps(

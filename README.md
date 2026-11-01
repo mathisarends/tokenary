@@ -83,6 +83,13 @@ do not export a calculator or duplicate library code. Request objects and usage
 adapters work with a custom catalog through the same `catalog=CATALOG` argument.
 Generation works after a plain `pip install tokenary` and does not require Ruff.
 
+`--output` is required for both generation and `--check`; there is no implicit
+destination. Scripts that relied on the v0.2 default `model_prices.py` must add
+`--output model_prices.py`. Missing/invalid arguments and `--help` are handled
+before downloads, catalog reads or writes. Outputs are validated first and
+replaced atomically; a failed replacement preserves an existing file and removes
+its temporary file. An unsuccessful generation reports an error and nonzero exit.
+
 Use exact LiteLLM model IDs. An unknown ID fails generation without changing the
 output. Pass `--all` explicitly if you want the entire catalog.
 
