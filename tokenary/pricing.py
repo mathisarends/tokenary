@@ -3,9 +3,19 @@
 import math
 import re
 from functools import cached_property
-from typing import Self
+from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, PrivateAttr, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    StrictBool,
+    field_validator,
+    model_validator,
+)
+
+_TokenLimit = Annotated[int, Field(ge=0)]
 
 _TOKEN_TIER = re.compile(r"^(.*)_above_(\d+)([km]?)_tokens$")
 _SPECIALIZED_TOKEN_TIER = re.compile(
@@ -37,10 +47,49 @@ class SearchContextCost(BaseModel):
 
 
 class ModelPricing(BaseModel):
+    """Rates and optional upstream model metadata; limits are informational."""
+
     model_config = ConfigDict(extra="allow", frozen=True)
 
     litellm_provider: str | None = None
     mode: str | None = None
+
+    max_input_tokens: _TokenLimit | None = None
+    max_output_tokens: _TokenLimit | None = None
+    # LiteLLM's legacy field has model-dependent meaning; never infer other limits.
+    max_tokens: _TokenLimit | None = None
+    prompt_cache_min_tokens: _TokenLimit | None = None
+
+    supported_modalities: tuple[str, ...] | None = None
+    supported_output_modalities: tuple[str, ...] | None = None
+    supported_endpoints: tuple[str, ...] | None = None
+    supported_regions: tuple[str, ...] | None = None
+    deprecation_date: str | None = None
+
+    supports_function_calling: StrictBool | None = None
+    supports_parallel_function_calling: StrictBool | None = None
+    supports_tool_choice: StrictBool | None = None
+    supports_response_schema: StrictBool | None = None
+    supports_native_structured_output: StrictBool | None = None
+    supports_system_messages: StrictBool | None = None
+    supports_assistant_prefill: StrictBool | None = None
+    supports_native_streaming: StrictBool | None = None
+    supports_prompt_caching: StrictBool | None = None
+    supports_vision: StrictBool | None = None
+    supports_audio_input: StrictBool | None = None
+    supports_audio_output: StrictBool | None = None
+    supports_video_input: StrictBool | None = None
+    supports_pdf_input: StrictBool | None = None
+    supports_web_search: StrictBool | None = None
+    supports_url_context: StrictBool | None = None
+    supports_computer_use: StrictBool | None = None
+    supports_reasoning: StrictBool | None = None
+    supports_adaptive_thinking: StrictBool | None = None
+    thinking_always_on: StrictBool | None = None
+    reasoning_effort_levels: tuple[str, ...] | None = None
+    default_reasoning_effort: str | None = None
+    reasoning_modes: tuple[str, ...] | None = None
+    reasoning_contexts: tuple[str, ...] | None = None
 
     input_cost_per_token: float | None = None
     output_cost_per_token: float | None = None
@@ -62,6 +111,23 @@ class ModelPricing(BaseModel):
 
     _rates: dict[str, float] = PrivateAttr(default_factory=dict)
     _tiers: dict[str, list[tuple[int, float]]] = PrivateAttr(default_factory=dict)
+
+    @field_validator(
+        "max_input_tokens",
+        "max_output_tokens",
+        "max_tokens",
+        "prompt_cache_min_tokens",
+        mode="before",
+    )
+    @classmethod
+    def validate_token_limit(cls, value: object) -> object:
+        # Upstream sometimes represents integer counts as integral floats.
+        # Pydantic rejects fractions/nonfinite values; exclude bools and strings too.
+        if value is not None and (
+            isinstance(value, bool) or not isinstance(value, (int, float))
+        ):
+            raise ValueError("Token limits must be nonnegative integer counts or null")
+        return value
 
     @model_validator(mode="before")
     @classmethod

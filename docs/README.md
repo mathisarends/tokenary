@@ -6,6 +6,7 @@ Choose one guide for the task at hand:
 | Task | Read |
 | --- | --- |
 | Calculate costs and understand the breakdown | [Usage and billing reference](usage.md) |
+| Inspect model limits, capabilities and deprecation | [Model metadata](model-metadata.md) |
 | Normalize provider response usage | [Usage adapters](usage.md#provider-usage-adapters) |
 | Generate a selected Python, JSON or gzip catalog | [Custom catalogs](catalogs.md) |
 | Pin a source and detect generated-file drift | [Reproducible generation](catalogs.md#reproducible-generation-and-drift-checks) |
@@ -24,6 +25,7 @@ After [development setup](development.md#setup), run any example with
 | Example | Demonstrates |
 | --- | --- |
 | [basic_calculate.py](../examples/basic_calculate.py) | Bundled prices and a category breakdown |
+| [model_metadata.py](../examples/model_metadata.py) | Offline limits, capabilities and cache metadata |
 | [request_object.py](../examples/request_object.py) | A validated `UsageCostRequest` |
 | [multimodal_cost.py](../examples/multimodal_cost.py) | Inclusive output and a separate reasoning breakdown |
 | [custom_catalog.py](../examples/custom_catalog.py) | Local generation, exact filters and explicit catalogs |

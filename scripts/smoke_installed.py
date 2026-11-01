@@ -60,7 +60,7 @@ def main() -> None:
 
     sys.addaudithook(observed_open)
     import tokenary
-    from tokenary.catalog import get_default_catalog
+    from tokenary import get_default_catalog
     from tokenary.generator.__main__ import main as generate
 
     assert "site-packages" in tokenary.__file__, tokenary.__file__
@@ -116,6 +116,14 @@ def main() -> None:
                 "input_cost_per_token": 0.25,
                 "output_cost_per_token": 0.5,
                 "cache_read_input_token_cost": 0.125,
+                "max_input_tokens": 128000,
+                "max_output_tokens": 4096,
+                "supports_function_calling": False,
+                "supports_prompt_caching": True,
+                "prompt_cache_min_tokens": 1024,
+                "supported_modalities": ["text", "image"],
+                "reasoning_effort_levels": ["low", "high"],
+                "deprecation_date": "2027-01-01",
             },
             "excluded/same-provider": {
                 "litellm_provider": "fixture-a",
@@ -159,6 +167,15 @@ def main() -> None:
                 else:
                     catalog = tokenary.PricingCatalog.from_file(output)
                 assert set(catalog.models) == expected
+                info = catalog.models[own_model]
+                assert info.max_input_tokens == 128000
+                assert info.max_output_tokens == 4096
+                assert info.supports_function_calling is False
+                assert info.supports_prompt_caching is True
+                assert info.prompt_cache_min_tokens == 1024
+                assert info.supported_modalities == ("text", "image")
+                assert info.reasoning_effort_levels == ("low", "high")
+                assert info.deprecation_date == "2027-01-01"
                 result = tokenary.calculate(
                     model=own_model,
                     input_tokens=4,
@@ -205,6 +222,7 @@ def main() -> None:
     result = tokenary.calculate(model="gpt-4o", input_tokens=1000)
     assert result.total_cost == 0.0025
     assert get_default_catalog().loaded_model_count == 1
+    assert get_default_catalog().models["gpt-4o"].max_input_tokens > 0
     assert len(reads) == 2 and reads[-1].parent.name == "providers"
     tokenary.calculate(model="gpt-4o", input_tokens=1)
     tokenary.calculate(model="o1", input_tokens=1)

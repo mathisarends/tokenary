@@ -63,6 +63,7 @@ supported too.
 
 ## Find the details
 
+- [Model metadata](docs/model-metadata.md) — context limits, capabilities, caching and deprecation.
 - [Documentation index](docs/README.md) — guides, reference and runnable examples.
 - [Usage reference](docs/usage.md) — request fields, adapters, cache and context tiers.
 - [Development](docs/development.md) — setup, checks and catalog regeneration.

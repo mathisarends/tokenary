@@ -3,8 +3,9 @@
 # Size and performance
 
 The refreshed snapshot contains 4,552 models in 153 provider files and a
-price-free index, totaling 282,935 compressed bytes in this build. A generated
-module for `gpt-4o` and `o1` is 1,653 bytes. Compressed sizes vary with the
+price-free index, totaling 328,661 compressed bytes with model metadata in this
+build (282,935 bytes before metadata). A generated module for `gpt-4o` and `o1`
+is 2,901 bytes. Compressed sizes vary with the
 Python/zlib build; canonical checksums remain stable.
 See [snapshot provenance](../data/README.md).
 

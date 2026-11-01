@@ -10,10 +10,10 @@ Neither calculations nor test runs download a replacement automatically.
 | Models | 4,552 (excluding `sample_spec`) |
 | Provider resources | 153, plus the price-free index |
 | Canonical source SHA-256 | `db1c09c9ee8993e3bcbea6f62f41b0414390cef2493205d9d376e5e9159bb3ae` |
-| Selected bundle SHA-256 | `4b7e82f1d110024b1012f1765de501dd21d247334c8dcb1b3a508fc5bb70254e` |
+| Selected bundle SHA-256 | `34c2f9a3be61cccfa7fa9308d5ebd76b4002a1a974856d1c6a12e669864a4244` |
 
 The source checksum hashes canonical parsed JSON, not raw file bytes. The bundle
-checksum covers selected price data and enum names. Both are recorded in
+checksum covers selected prices, model metadata and enum names. Both are recorded in
 `tokenary/data/index.json.gz`; results expose the pricing checksums too.
 The refresh date records retrieval, not when provider tariffs took effect.
 
@@ -23,7 +23,8 @@ Compared with the snapshot on `main` at `5c1a18d`:
 
 - 2,973 → 4,552 models; 1,950 added and 371 removed upstream IDs.
 - 768 retained models changed provider, mode or price fields. Other changes to
-  upstream capability/context metadata remain in the raw source only.
+  upstream capability/context metadata were initially kept in the raw source only;
+  the metadata rebuild described below includes them in the runtime bundle.
 - 123 → 153 provider resources. Existing enum aliases are unchanged for every
   retained model.
 - New `_ultrafast` service-tier and `_decisions` endpoint prices are retained as
@@ -33,6 +34,15 @@ Compared with the snapshot on `main` at `5c1a18d`:
 
 Removed IDs raise `KeyError` with the new bundle. Use a pinned explicit catalog
 when replaying historical usage that requires an older model or tariff.
+
+## Model metadata rebuild
+
+The bundle now also retains model limits, capabilities, modalities, caching
+requirements, reasoning settings, endpoints, regions and deprecation dates.
+It was rebuilt from the same pinned source without downloading a new snapshot.
+The source checksum, model IDs, enum aliases and price fields are unchanged;
+the selected bundle checksum changed because it also covers retained metadata.
+See [model metadata](../docs/model-metadata.md) for coverage and semantics.
 
 ## Regeneration
 
