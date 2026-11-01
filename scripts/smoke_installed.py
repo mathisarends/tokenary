@@ -19,6 +19,21 @@ def main() -> None:
     assert importlib.util.find_spec("anthropic") is None
     assert get_default_catalog.cache_info().currsize == 0
 
+    reads = []
+    original_read = Path.read_bytes
+
+    def observed_read(path):
+        if path.name == "index.json.gz" or path.parent.name == "providers":
+            reads.append(path)
+        return original_read(path)
+
+    Path.read_bytes = observed_read
+    from tokenary import ModelName
+
+    assert ModelName.GPT_4O == "gpt-4o"
+    assert len(reads) == 1 and reads[0].name == "index.json.gz"
+    assert get_default_catalog.cache_info().currsize == 0
+
     installed = importlib.metadata.distribution("tokenary")
     sources = [entry for entry in installed.files if entry.suffix == ".py"]
     source_bytes = sum(installed.locate_file(entry).stat().st_size for entry in sources)
@@ -77,6 +92,13 @@ def main() -> None:
     result = tokenary.calculate(model="gpt-4o", input_tokens=1000)
     assert result.total_cost == 0.0025
     assert get_default_catalog().loaded_model_count == 1
+    assert len(reads) == 2 and reads[-1].parent.name == "providers"
+    tokenary.calculate(model="gpt-4o", input_tokens=1)
+    tokenary.calculate(model="o1", input_tokens=1)
+    assert len(reads) == 2
+    tokenary.calculate(model="claude-sonnet-4-20250514", input_tokens=1)
+    assert len(reads) == 3 and reads[-1] != reads[-2]
+    Path.read_bytes = original_read
     print(f"Installed wheel verified; source={source_bytes} B, subset={subset_bytes} B")
 
 

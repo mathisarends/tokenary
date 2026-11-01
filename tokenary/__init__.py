@@ -25,9 +25,9 @@ __all__ = [
 
 def __getattr__(name: str) -> object:
     if name == "ModelName":
-        from .catalog import get_default_catalog
+        from .catalog import get_bundled_model_enum
 
-        model_enum = get_default_catalog().model_enum
+        model_enum = get_bundled_model_enum()
         globals()[name] = model_enum
         return model_enum
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

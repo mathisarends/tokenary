@@ -1,0 +1,42 @@
+{
+  "environment": {
+    "python": "3.14.0 (main, Oct 10 2025, 12:48:29) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "runs": 7,
+    "bytecode": "enabled; one unmeasured warmup process",
+    "calls_per_sample": 10000,
+    "rss": "working set on Windows; resident pages on Linux"
+  },
+  "metrics": {
+    "import_ms": {
+      "median": 687.923,
+      "min": 468.084,
+      "max": 1212.962
+    },
+    "first_calculate_ms": {
+      "median": 50.721,
+      "min": 32.606,
+      "max": 64.999
+    },
+    "repeated_calculate_us": {
+      "median": 18.973,
+      "min": 14.044,
+      "max": 36.193
+    },
+    "request_calculate_us": {
+      "median": 14.294,
+      "min": 9.509,
+      "max": 31.387
+    },
+    "import_rss_delta_bytes": {
+      "median": 15503360,
+      "min": 15458304,
+      "max": 15859712
+    },
+    "first_rss_delta_bytes": {
+      "median": 3158016,
+      "min": 2998272,
+      "max": 3330048
+    }
+  }
+}

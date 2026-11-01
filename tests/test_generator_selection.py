@@ -195,18 +195,19 @@ def test_cli_requires_explicit_model_selection():
 
 
 def test_committed_catalog_matches_pinned_source():
+    from tokenary.generator.bundle import main as bundle_main
+
     root = Path(__file__).resolve().parents[1]
     source = root / "data/model_prices.generated.json"
-    output = root / "tokenary/data/catalog.json.gz"
-    main(
+    output = root / "tokenary/data"
+    bundle_main(
         [
             "--input",
             str(source),
             "--source",
             "https://raw.githubusercontent.com/BerriAI/litellm/main/"
             "model_prices_and_context_window.json",
-            "--all",
-            "--output",
+            "--output-dir",
             str(output),
             "--check",
         ]
