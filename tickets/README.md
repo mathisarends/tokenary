@@ -19,7 +19,7 @@ oder Umbenennung von `MissingPriceError` einführen.
 | [001](001-usage-validation.md) | — | Verbrauchswerte bereits validiert | keine | done |
 | [002](002-zero-reasoning-rate.md) | — | Reasoningpreis null bereits korrekt | keine | done |
 | [003](003-missing-pricing.md) | — | Fehlende Preise werden explizit gemeldet | keine | done |
-| [004](004-context-price-tiers.md) | P2 | Unbekannte Staffelvarianten absichern und Semantik belegen | keine | partial |
+| [004](004-context-price-tiers.md) | P2 | Unbekannte Staffelvarianten abgesichert und Semantik belegt | keine | in_review |
 | [005](005-generator-without-ruff.md) | — | Generator funktioniert ohne Ruff | keine | done |
 | [006](006-explicit-catalog-runtime.md) | — | Eigene Kataloge und entkoppelte Runtime vorhanden | keine | done |
 | [007](007-explicit-generator-output.md) | P2 | Implizites Ausgabeziel absichern | keine | partial |

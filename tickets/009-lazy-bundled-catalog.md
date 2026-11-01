@@ -5,7 +5,7 @@
 - Bereits umgesetzt: [PR #1](https://github.com/mathisarends/tokenary/pull/1), `facde09`
 - Offene Abhängigkeiten: 008
 - Branch für Rest: `codex/ticket-009-lazy-bundled-catalog`
-- Rest-PR: noch nicht erstellt
+- Rest-PR: [#3](https://github.com/mathisarends/tokenary/pull/3)
 - Ablauf und Nachweise: [Index](README.md), [Prüfbericht](VERIFICATION.md)
 
 ## Bereits erledigt und verifiziert

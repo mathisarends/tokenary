@@ -8,6 +8,10 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, PrivateAttr, model_validator
 
 _TOKEN_TIER = re.compile(r"^(.*)_above_(\d+)([km]?)_tokens$")
+_SERVICE_TOKEN_TIER = re.compile(
+    r"^.*_above_\d+[km]?_tokens_(?:priority|batches|flex)$"
+)
+_CONTEXT_TIER_MARKER = re.compile(r"_above_.*_tokens", re.IGNORECASE)
 
 
 def _validate_rate(value: object) -> None:
@@ -65,6 +69,16 @@ class ModelPricing(BaseModel):
         if isinstance(value, dict):
             for key, rate in value.items():
                 if "cost" in key:
+                    if (
+                        _CONTEXT_TIER_MARKER.search(key)
+                        and not _TOKEN_TIER.fullmatch(key)
+                        and not _SERVICE_TOKEN_TIER.fullmatch(key)
+                    ):
+                        raise ValueError(
+                            f"Unsupported token-context tier field {key!r}; "
+                            "expected *_above_<integer>[k|m]_tokens "
+                            "with lowercase units"
+                        )
                     _validate_rate(rate)
         return value
 
