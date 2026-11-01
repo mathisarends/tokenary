@@ -18,11 +18,13 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description="Generate a compact offline catalog for selected models."
     )
-    selection = parser.add_mutually_exclusive_group(required=True)
-    selection.add_argument(
+    parser.add_argument(
         "--models", "--model", action="extend", nargs="+", help="Exact model IDs"
     )
-    selection.add_argument("--all", action="store_true", help="Include every model")
+    parser.add_argument(
+        "--provider", action="append", help="Exact litellm_provider (repeatable)"
+    )
+    parser.add_argument("--all", action="store_true", help="Include every model")
     inputs = parser.add_mutually_exclusive_group()
     inputs.add_argument("--input", type=Path, help="Pinned LiteLLM JSON snapshot")
     inputs.add_argument("--url", help="LiteLLM JSON URL (defaults to latest upstream)")
@@ -37,6 +39,10 @@ def main(argv: list[str] | None = None) -> None:
         "--check", action="store_true", help="Fail on drift; never write output"
     )
     args = parser.parse_args(argv)
+    if args.all and (args.models is not None or args.provider is not None):
+        parser.error("--all cannot be combined with --models/--model or --provider")
+    if not args.all and args.models is None and args.provider is None:
+        parser.error("select --models/--model, --provider, or --all")
 
     try:
         if args.input:
@@ -58,6 +64,7 @@ def main(argv: list[str] | None = None) -> None:
         payload = build_catalog_payload(
             raw_prices,
             models=None if args.all else args.models,
+            providers=args.provider,
             source=source,
             previous_names=previous_names,
         )

@@ -83,6 +83,24 @@ Generation works after a plain `pip install tokenary` and does not require Ruff.
 Use exact LiteLLM model IDs. An unknown ID fails generation without changing the
 output. Pass `--all` explicitly if you want the entire catalog.
 
+Select a provider through its exact `litellm_provider` metadata, or combine it
+with model IDs:
+
+```bash
+tokenary-generate --provider openai --output openai_prices.json
+tokenary-generate --provider openai --provider anthropic --output prices.json.gz
+tokenary-generate --provider openai --model gpt-4o --model o1 --output my_prices.py
+```
+
+Repeated providers or models are combined with OR; provider and model filters
+are combined with AND. Values are case-sensitive, with no prefix matching.
+Unknown values and empty intersections fail before output is replaced. `--all`
+cannot be combined with filters. Models without provider metadata remain
+selectable by ID. The generator's `build_catalog_payload(..., providers=...,
+models=...)` and render/write helpers accept the same filters; `None` means no
+filter and an explicitly empty selection is an error. `sample_spec` is metadata
+and is excluded from generated runtime catalogs.
+
 ### JSON catalogs
 
 Python code generation is optional:
