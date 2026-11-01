@@ -87,7 +87,6 @@ Jeweils beide Jobs `test (3.13)` und `test (3.14)` vollständig erfolgreich:
 | 009 / #3 | `fdeef7a` | [Run 41287988834](https://github.com/mathisarends/tokenary/actions/runs/41287988834) |
 | 004 / #4 | `7712f7f` | [Run 41288243413](https://github.com/mathisarends/tokenary/actions/runs/41288243413) |
 | 007 / #5 | `70c5646` | [Run 41288347352](https://github.com/mathisarends/tokenary/actions/runs/41288347352) |
-
 | 010 / #6 | `1de0b32` | [Run 41288815458](https://github.com/mathisarends/tokenary/actions/runs/41288815458) |
 
 Run 41288815458 ist für beide Pythonversionen vollständig erfolgreich,
