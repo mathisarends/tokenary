@@ -8,8 +8,8 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, PrivateAttr, model_validator
 
 _TOKEN_TIER = re.compile(r"^(.*)_above_(\d+)([km]?)_tokens$")
-_SERVICE_TOKEN_TIER = re.compile(
-    r"^.*_above_\d+[km]?_tokens_(?:priority|batches|flex)$"
+_SPECIALIZED_TOKEN_TIER = re.compile(
+    r"^.*_above_\d+[km]?_tokens_(?:priority|batches|flex|ultrafast|decisions)$"
 )
 _CONTEXT_TIER_MARKER = re.compile(r"_above_.*_tokens", re.IGNORECASE)
 
@@ -72,7 +72,9 @@ class ModelPricing(BaseModel):
                     if (
                         _CONTEXT_TIER_MARKER.search(key)
                         and not _TOKEN_TIER.fullmatch(key)
-                        and not _SERVICE_TOKEN_TIER.fullmatch(key)
+                        # Service-tier and endpoint prices are retained as data;
+                        # they do not override standard calculation rates.
+                        and not _SPECIALIZED_TOKEN_TIER.fullmatch(key)
                     ):
                         raise ValueError(
                             f"Unsupported token-context tier field {key!r}; "

@@ -95,7 +95,7 @@ tokenary.calculate(model='gpt-4o', input_tokens=2)
 assert len(reads) == 2 and len(validations) == 1
 tokenary.calculate(model='o1', input_tokens=1)
 assert len(reads) == 2 and len(validations) == 2
-tokenary.calculate(model='claude-sonnet-4-20250514', input_tokens=1)
+tokenary.calculate(model='claude-sonnet-4-6', input_tokens=1)
 assert len(reads) == 3 and reads[-1] != first
 assert len(validations) == 3
 assert get_default_catalog().model_enum is ModelName
