@@ -157,6 +157,26 @@ input. Known `*_above_<N>k_tokens` tariff fields apply above their strict thresh
 to the entire category, based on total input context, including cached tokens.
 The highest matching threshold wins. Output rates use that same input threshold.
 
+Supported threshold spellings are an integer token count, or an integer with
+lowercase `k` (1,000) or `m` (1,000,000), followed by `_tokens`. At the exact
+threshold the lower rate still applies. Recognizable unsupported token-tier
+fields (for example `input_cost_per_token_above_200K_tokens`) raise a Pydantic
+`ValidationError` during generation or the model's first pricing validation;
+they are never silently priced at the base rate. Other unknown non-context price
+fields remain available. Cache TTL fields such as `above_1hr` are separate from
+token thresholds; `_priority`, `_batches` and `_flex` rates are retained data for
+unsupported service tiers and do not change standard rates.
+
+This interprets the selected snapshot, without imposing a surcharge on models
+that have no such fields. [LiteLLM's cost-map contract](https://docs.litellm.ai/docs/proxy/model_cost_map)
+distinguishes context, service-tier and cache-duration suffixes.
+[Google's Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing#gemini-2.5-pro)
+assigns input and output rates by prompt-length band, including the boundary at
+200k. [Anthropic's long-context rules](https://platform.claude.com/docs/en/about-claude/pricing#long-context-pricing)
+count cache reads/writes in prompt length and apply a request's band to that
+request. These sources explain the interpretation; prices and supported context
+windows can change independently of the installed offline snapshot.
+
 Input and output totals are inclusive. Reasoning and audio tokens are subsets,
 not quantities to add again. All disjoint subsets must fit within their total.
 This follows OpenAI's reported
