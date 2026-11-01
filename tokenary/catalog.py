@@ -107,7 +107,7 @@ class PricingCatalog:
         )
 
     @classmethod
-    def from_dict(cls, payload: dict[str, object]) -> "PricingCatalog":
+    def from_dict(cls, payload: Mapping[str, object]) -> "PricingCatalog":
         if payload.get("format_version") != CATALOG_FORMAT_VERSION:
             raise ValueError("Unsupported catalog format version")
         models = payload.get("models")

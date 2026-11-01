@@ -5,6 +5,7 @@ description = "Calculate LLM API costs with compact, selectable offline model ca
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "httpx2>=2.16.0,<3",
     "pydantic>=2.13.4",
 ]
 

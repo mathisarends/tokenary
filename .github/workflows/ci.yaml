@@ -46,6 +46,7 @@ jobs:
           uv run python examples/request_object.py
           uv run python examples/multimodal_cost.py
           uv run python examples/custom_catalog.py
+          uv run python examples/live_catalog.py
 
       - name: Smoke-test installed wheel without dev dependencies
         run: |

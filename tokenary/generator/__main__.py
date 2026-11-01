@@ -1,6 +1,9 @@
 import argparse
+import asyncio
 import json
 from pathlib import Path
+
+import httpx2
 
 from tokenary._serialization import write_atomic
 from tokenary.catalog import get_bundled_enum_names
@@ -52,7 +55,7 @@ def main(argv: list[str] | None = None) -> None:
             source = args.source or args.input.as_posix()
         else:
             url = args.url or _DEFAULT_PRICE_URL
-            raw_prices = fetch_model_prices_raw(url=url)
+            raw_prices = asyncio.run(fetch_model_prices_raw(url=url))
             source = args.source or url
         if not isinstance(raw_prices, dict):
             raise ValueError("Model price source must be a JSON object")
@@ -78,7 +81,7 @@ def main(argv: list[str] | None = None) -> None:
         else:
             write_atomic(args.output, rendered)
             print(f"Generated {len(payload['models'])} models: {args.output}")
-    except (OSError, ValueError, SyntaxError) as exc:
+    except (httpx2.HTTPError, OSError, ValueError, SyntaxError) as exc:
         parser.exit(1, f"Generation failed: {exc}\n")
 
 
