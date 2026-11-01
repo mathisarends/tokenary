@@ -8,26 +8,27 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory, gettempdir
 
-import tokenary
-from tokenary.catalog import get_default_catalog
-
 
 def main() -> None:
+    reads = []
+
+    def observed_open(event, args):
+        if event == "open" and isinstance(args[0], str):
+            path = Path(args[0])
+            if path.name == "index.json.gz" or path.parent.name == "providers":
+                reads.append(path)
+
+    sys.addaudithook(observed_open)
+    import tokenary
+    from tokenary.catalog import get_default_catalog
+    from tokenary.generator.__main__ import main as generate
+
     assert "site-packages" in tokenary.__file__, tokenary.__file__
     assert importlib.util.find_spec("ruff") is None
     assert importlib.util.find_spec("openai") is None
     assert importlib.util.find_spec("anthropic") is None
     assert get_default_catalog.cache_info().currsize == 0
-
-    reads = []
-    original_read = Path.read_bytes
-
-    def observed_read(path):
-        if path.name == "index.json.gz" or path.parent.name == "providers":
-            reads.append(path)
-        return original_read(path)
-
-    Path.read_bytes = observed_read
+    assert reads == []
     from tokenary import ModelName
 
     assert ModelName.GPT_4O == "gpt-4o"
@@ -65,47 +66,96 @@ def main() -> None:
             assert "--output" in missing_output.stderr
             assert list(root.iterdir()) == []
         source = root / "source.json"
-        source.write_text(
-            json.dumps(
-                {
-                    "gpt-4o": {
-                        "input_cost_per_token": 2.5e-6,
-                        "cache_read_input_token_cost": 1.25e-6,
-                    },
-                    "unused": {"input_cost_per_token": 1},
-                }
-            ),
-            encoding="utf-8",
-        )
-        output = root / "selected.py"
-        args = [
-            sys.executable,
-            "-I",
-            "-m",
-            "tokenary.generator",
-            "--input",
-            str(source),
-            "--models",
-            "gpt-4o",
-            "--output",
-            str(output),
+        own_model = "fixture/unreleased-chat"
+        assert own_model not in ModelName._value2member_map_
+        fixture = {
+            "sample_spec": {},
+            own_model: {
+                "litellm_provider": "fixture-a",
+                "input_cost_per_token": 0.25,
+                "output_cost_per_token": 0.5,
+                "cache_read_input_token_cost": 0.125,
+            },
+            "excluded/same-provider": {
+                "litellm_provider": "fixture-a",
+                "input_cost_per_token": 1,
+            },
+            "excluded/other-provider": {
+                "litellm_provider": "fixture-b",
+                "input_cost_per_token": 2,
+            },
+        }
+        source.write_text(json.dumps(fixture), encoding="utf-8")
+        selections = [
+            (["--provider", "fixture-a"], {own_model, "excluded/same-provider"}),
+            (["--model", own_model], {own_model}),
+            (["--provider", "fixture-a", "--models", own_model], {own_model}),
         ]
-        subprocess.run(args, cwd=root, check=True)
-        subprocess.run([*args, "--check"], cwd=root, check=True)
-        spec = importlib.util.spec_from_file_location("selected_prices", output)
-        selected = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(selected)
-        result = tokenary.calculate(
-            model=selected.ModelName.GPT_4O,
-            input_tokens=1000,
-            cached_input_tokens=900,
-            catalog=selected.CATALOG,
-        )
-        assert abs(result.total_cost - 0.001375) < 1e-12
-        assert len(selected.ModelName) == 1
-        assert selected.CATALOG.loaded_model_count == 1
-        assert get_default_catalog.cache_info().currsize == 0
-        subset_bytes = output.stat().st_size
+        subset_sizes = {}
+        for label, entry in (
+            ("console", [str(console)]),
+            ("module", [sys.executable, "-I", "-m", "tokenary.generator"]),
+        ):
+            for suffix, (selection, expected) in zip(
+                (".py", ".json", ".json.gz"), selections, strict=True
+            ):
+                output = root / f"{label}{suffix}"
+                args = ["--input", str(source), *selection, "--output", str(output)]
+                subprocess.run([*entry, *args], cwd=root, check=True)
+                subprocess.run([*entry, *args, "--check"], cwd=root, check=True)
+                # Execute the installed entry function under the read observer too:
+                # subprocess resource reads cannot be observed by the parent.
+                generate([*args, "--check"])
+                assert len(reads) == 1, reads
+                if suffix == ".py":
+                    spec = importlib.util.spec_from_file_location(
+                        f"{label}_prices", output
+                    )
+                    selected = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(selected)
+                    catalog = selected.CATALOG
+                    assert {member.value for member in selected.ModelName} == expected
+                else:
+                    catalog = tokenary.PricingCatalog.from_file(output)
+                assert set(catalog.models) == expected
+                result = tokenary.calculate(
+                    model=own_model,
+                    input_tokens=4,
+                    output_tokens=2,
+                    cached_input_tokens=2,
+                    catalog=catalog,
+                )
+                assert result.total_cost == 1.75
+                assert catalog.loaded_model_count == 1
+                for excluded in set(fixture) - expected - {"sample_spec"}:
+                    try:
+                        tokenary.calculate(
+                            model=excluded, input_tokens=1, catalog=catalog
+                        )
+                    except KeyError as exc:
+                        assert excluded in str(exc)
+                    else:
+                        raise AssertionError(f"Unselected model accepted: {excluded}")
+                assert get_default_catalog.cache_info().currsize == 0
+                assert len(reads) == 1, reads
+                subset_sizes[f"{label}{suffix}"] = output.stat().st_size
+                before = output.read_bytes()
+                failed = subprocess.run(
+                    [
+                        *entry,
+                        "--input",
+                        str(source),
+                        "--provider",
+                        "unknown",
+                        "--output",
+                        str(output),
+                    ],
+                    cwd=root,
+                    capture_output=True,
+                    text=True,
+                )
+                assert failed.returncode == 1 and "Unknown providers" in failed.stderr
+                assert output.read_bytes() == before
 
     result = tokenary.calculate(model="gpt-4o", input_tokens=1000)
     assert result.total_cost == 0.0025
@@ -116,8 +166,7 @@ def main() -> None:
     assert len(reads) == 2
     tokenary.calculate(model="claude-sonnet-4-20250514", input_tokens=1)
     assert len(reads) == 3 and reads[-1] != reads[-2]
-    Path.read_bytes = original_read
-    print(f"Installed wheel verified; source={source_bytes} B, subset={subset_bytes} B")
+    print(f"Installed wheel verified; source={source_bytes} B, subsets={subset_sizes}")
 
 
 if __name__ == "__main__":

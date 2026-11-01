@@ -5,27 +5,29 @@ Abgleich am 01.11.2026 gegen `facde09` (v0.2.0), den Merge von
 Codeprüfung, 86 bestandenen Tests und einem erfolgreichen isolierten Wheel-Test
 aktualisiert. Einzelheiten und Grenzen stehen im [Prüfbericht](VERIFICATION.md).
 
-**Fünf Tickets sind erledigt, fünf haben einen begrenzten Restumfang.**
-`done` bedeutet durch den bereits gemergten PR umgesetzt und lokal verifiziert.
-`partial` bedeutet: nur den beschriebenen Rest bearbeiten, keine Neuimplementierung.
+**Fünf Tickets sind durch PR #1 erledigt; die fünf Restarbeiten sind als PR-Stack
+umgesetzt und in Review.** `done` bedeutet tatsächlich gemergt und verifiziert.
+`in_review` bedeutet implementiert und geprüft, aber noch nicht gemergt.
+Die Abschnitte „Restbefund“ dokumentieren den Ausgangszustand vor den neuen PRs;
+die jeweiligen Verifikationsabschnitte beschreiben die abgeschlossene Umsetzung.
 Die ursprünglichen Architekturvorschläge sind durch die tatsächlich vorhandene
 öffentliche API ersetzt. Insbesondere keine parallele `Catalog`/`Calculator`-API
 oder Umbenennung von `MissingPriceError` einführen.
 
 ## Status und Reihenfolge
 
-| Ticket | Priorität des Rests | Verbleibende Aufgabe | Offene Abhängigkeiten | Status |
-| --- | --- | --- | --- | --- |
-| [001](001-usage-validation.md) | — | Verbrauchswerte bereits validiert | keine | done |
-| [002](002-zero-reasoning-rate.md) | — | Reasoningpreis null bereits korrekt | keine | done |
-| [003](003-missing-pricing.md) | — | Fehlende Preise werden explizit gemeldet | keine | done |
-| [004](004-context-price-tiers.md) | P2 | Unbekannte Staffelvarianten abgesichert und Semantik belegt | keine | in_review |
-| [005](005-generator-without-ruff.md) | — | Generator funktioniert ohne Ruff | keine | done |
-| [006](006-explicit-catalog-runtime.md) | — | Eigene Kataloge und entkoppelte Runtime vorhanden | keine | done |
-| [007](007-explicit-generator-output.md) | P2 | Explizites Ausgabeziel abgesichert | keine | in_review |
-| [008](008-provider-model-selection.md) | P1 | Providerfilter und kombinierte Auswahl ergänzt | keine | in_review |
-| [009](009-lazy-bundled-catalog.md) | P1 | Providerdaten und Namenshistorie getrennt geladen | 008 | in_review |
-| [010](010-public-workflow-verification.md) | P2 | Restfunktionen in Doku und Wheel-Test integrieren | 004, 007, 008, 009 | partial |
+| Ticket | Ergebnis | Status | PR |
+| --- | --- | --- | --- |
+| [001](001-usage-validation.md) | Verbrauchswerte validiert | done | [#1](https://github.com/mathisarends/tokenary/pull/1) |
+| [002](002-zero-reasoning-rate.md) | Reasoningpreis null korrekt | done | [#1](https://github.com/mathisarends/tokenary/pull/1) |
+| [003](003-missing-pricing.md) | Fehlende Preise explizit gemeldet | done | [#1](https://github.com/mathisarends/tokenary/pull/1) |
+| [004](004-context-price-tiers.md) | Unbekannte Staffelvarianten abgesichert, Semantik belegt | in_review | [#4](https://github.com/mathisarends/tokenary/pull/4) |
+| [005](005-generator-without-ruff.md) | Generator ohne Ruff | done | [#1](https://github.com/mathisarends/tokenary/pull/1) |
+| [006](006-explicit-catalog-runtime.md) | Eigene Kataloge und entkoppelte Runtime | done | [#1](https://github.com/mathisarends/tokenary/pull/1) |
+| [007](007-explicit-generator-output.md) | Explizites Ausgabeziel abgesichert | in_review | [#5](https://github.com/mathisarends/tokenary/pull/5) |
+| [008](008-provider-model-selection.md) | Providerfilter und kombinierte Auswahl | in_review | [#2](https://github.com/mathisarends/tokenary/pull/2) |
+| [009](009-lazy-bundled-catalog.md) | Providerdaten und Namenshistorie getrennt geladen | in_review | [#3](https://github.com/mathisarends/tokenary/pull/3) |
+| [010](010-public-workflow-verification.md) | Doku, Beispiele und installierter Workflow integriert | in_review | [#6](https://github.com/mathisarends/tokenary/pull/6) |
 
 Empfohlene Bearbeitungsfolge: **008 → 009 → 004 → 007 → 010**.
 Auf ausdrücklichen Nutzerauftrag vom 01.11.2026 werden diese Rest-PRs seriell
@@ -33,6 +35,8 @@ als Stack gebaut: 008 gegen `main`, jeder weitere gegen den vorherigen Branch.
 Die Vorgaben „gegen main“ und „erst nach Merge beginnen“ gelten für diesen Stack
 entsprechend erst nach dem Retargeting. Kein automatischer Merge; die Status
 bleiben bis zum tatsächlichen Merge `in_review`. CI prüft auch gestapelte PRs.
+Alle fünf PRs sind auf Python 3.13 und 3.14 grün; konkrete Commit-/Run-Links und
+die lokale Verifikation stehen in [Ticket 010](010-public-workflow-verification.md).
 Der Modellfilter und die explizite Katalogverwendung existieren bereits; 008 muss
 nicht auf einen erneuten Bau dieser Funktionen warten. Erledigte Voraussetzungen
 aus PR #1 gelten als erfüllt. Keine PRs nur zum Wiederholen erledigter Tickets.
@@ -74,7 +78,7 @@ result = calculate(
 tokenary-generate --models gpt-4o gpt-4o-mini --output ./prices.json
 # Bereits vorhanden: bewusste Vollauswahl und lokale Quelle.
 tokenary-generate --input prices.lock.json --all --output ./prices.json.gz
-# Geplant in 008: Provider und Kombination mit Modell-IDs.
+# Provider und Kombination mit Modell-IDs.
 tokenary-generate --provider openai --models gpt-4o --output ./prices.json
 ```
 

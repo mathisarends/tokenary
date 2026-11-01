@@ -5,7 +5,7 @@
 - Bereits umgesetzt: [PR #1](https://github.com/mathisarends/tokenary/pull/1), `facde09`
 - Offene Abhängigkeiten: keine
 - Branch für Rest: `codex/ticket-007-explicit-generator-output`
-- Rest-PR: noch nicht erstellt
+- Rest-PR: [#5](https://github.com/mathisarends/tokenary/pull/5)
 - Ablauf und Nachweise: [Index](README.md), [Prüfbericht](VERIFICATION.md)
 
 ## Bereits erledigt und verifiziert
@@ -61,3 +61,8 @@ hier nachtragen. Kein Umbau des existierenden Katalogformats.
   explizit mit `--output model_prices.py` angegeben werden. Das Bundleskript
   verwendet bereits ein explizites `--output-dir`.
 - Python 3.13/Remote-CI folgen separat. Kein Merge; Stackbasis Ticket 004 / PR #4.
+
+
+Nachtrag: [GitHub-CI](https://github.com/mathisarends/tokenary/actions/runs/41288347352)
+besteht vollständig auf Python 3.13 und 3.14. Abschließender Stack-/Wheel-Nachweis:
+[Ticket 010](010-public-workflow-verification.md).

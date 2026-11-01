@@ -40,8 +40,16 @@ jobs:
       - name: Build wheel
         run: uv build --wheel
 
+      - name: Run examples
+        run: |
+          uv run python examples/basic_calculate.py
+          uv run python examples/request_object.py
+          uv run python examples/multimodal_cost.py
+          uv run python examples/custom_catalog.py
+
       - name: Smoke-test installed wheel without dev dependencies
-        run: >-
-          uv run --isolated --no-project --python ${{ matrix.python-version }}
-          --with dist/tokenary-0.2.0-py3-none-any.whl
-          python -I scripts/smoke_installed.py
+        run: |
+          cd "$(mktemp -d)"
+          uv run --isolated --no-project --python ${{ matrix.python-version }} \
+            --with "$GITHUB_WORKSPACE/dist/tokenary-0.2.0-py3-none-any.whl" \
+            python -I "$GITHUB_WORKSPACE/scripts/smoke_installed.py"
