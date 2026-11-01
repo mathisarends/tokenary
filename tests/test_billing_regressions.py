@@ -5,9 +5,11 @@ from tokenary import MissingPriceError, PricingCatalog, UsageCostRequest, calcul
 from tokenary.pricing import ModelPricing
 
 
-def test_pixel_priced_image_request_fails_instead_of_looking_free():
+def test_pixel_priced_image_request_fails_instead_of_looking_free(billing_catalog):
     with pytest.raises(MissingPriceError) as exc:
-        calculate(model="1024-x-1024/dall-e-2", generated_images=1)
+        calculate(
+            model="1024-x-1024/dall-e-2", generated_images=1, catalog=billing_catalog
+        )
     assert exc.value.price_field == "output_cost_per_image"
     assert exc.value.model == "1024-x-1024/dall-e-2"
 
@@ -30,35 +32,52 @@ def test_explicit_zero_reasoning_price_is_not_replaced_by_output_rate():
     assert result.total_cost == 0
 
 
-def test_openai_inclusive_output_totals_do_not_double_charge_reasoning():
+def test_openai_inclusive_output_totals_do_not_double_charge_reasoning(billing_catalog):
     result = calculate(
-        model="o1", input_tokens=100, output_tokens=1186, reasoning_tokens=1024
+        model="o1",
+        input_tokens=100,
+        output_tokens=1186,
+        reasoning_tokens=1024,
+        catalog=billing_catalog,
     )
     assert result.output_cost == pytest.approx(162 * 6e-5)
     assert result.reasoning_cost == pytest.approx(1024 * 6e-5)
     assert result.total_cost == pytest.approx(0.07266)
 
 
-def test_openai_cached_tokens_are_subtracted_from_plain_input():
-    result = calculate(model="gpt-4o", input_tokens=1000, cached_input_tokens=900)
+def test_openai_cached_tokens_are_subtracted_from_plain_input(billing_catalog):
+    result = calculate(
+        model="gpt-4o",
+        input_tokens=1000,
+        cached_input_tokens=900,
+        catalog=billing_catalog,
+    )
     assert result.input_cost == pytest.approx(0.00025)
     assert result.cached_input_cost == pytest.approx(0.001125)
     assert result.total_cost == pytest.approx(0.001375)
 
 
 @pytest.mark.parametrize("tokens, rate", [(200000, 3e-6), (200001, 6e-6)])
-def test_context_boundary_changes_the_rate_for_the_whole_request(tokens, rate):
+def test_context_boundary_changes_the_rate_for_the_whole_request(
+    tokens, rate, billing_catalog
+):
     result = calculate(
-        model="claude-sonnet-4-20250514", input_tokens=tokens, output_tokens=1000
+        model="claude-sonnet-4-20250514",
+        input_tokens=tokens,
+        output_tokens=1000,
+        catalog=billing_catalog,
     )
     output_rate = 1.5e-5 if tokens == 200000 else 2.25e-5
     assert result.input_cost == pytest.approx(tokens * rate)
     assert result.output_cost == pytest.approx(1000 * output_rate)
 
 
-def test_long_context_regression_from_review():
+def test_long_context_regression_from_review(billing_catalog):
     result = calculate(
-        model="claude-sonnet-4-20250514", input_tokens=250000, output_tokens=1000
+        model="claude-sonnet-4-20250514",
+        input_tokens=250000,
+        output_tokens=1000,
+        catalog=billing_catalog,
     )
     assert result.total_cost == pytest.approx(1.5225)
 

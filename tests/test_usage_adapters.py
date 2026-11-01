@@ -26,14 +26,16 @@ from tokenary import (
         },
     ],
 )
-def test_both_openai_shapes_bill_reasoning_once(usage):
+def test_both_openai_shapes_bill_reasoning_once(usage, billing_catalog):
     request = from_openai_usage("o1", usage)
     assert request.output_tokens == 1186
     assert request.reasoning_tokens == 1024
-    assert calculate(request).total_cost == pytest.approx(0.07266)
+    assert calculate(request, catalog=billing_catalog).total_cost == pytest.approx(
+        0.07266
+    )
 
 
-def test_openai_sdk_usage_objects_work_without_sdk_dependencies():
+def test_openai_sdk_usage_objects_work_without_sdk_dependencies(billing_catalog):
     class SDKUsage(BaseModel):
         prompt_tokens: int
         completion_tokens: int
@@ -47,10 +49,12 @@ def test_openai_sdk_usage_objects_work_without_sdk_dependencies():
     )
     request = from_openai_usage("gpt-4o", usage)
     assert request.cached_input_tokens == 900
-    assert calculate(request).total_cost == pytest.approx(0.001375)
+    assert calculate(request, catalog=billing_catalog).total_cost == pytest.approx(
+        0.001375
+    )
 
 
-def test_anthropic_separate_counters_and_cache_ttls_are_normalized():
+def test_anthropic_separate_counters_and_cache_ttls_are_normalized(billing_catalog):
     request = from_anthropic_usage(
         "claude-sonnet-4-20250514",
         {
@@ -67,19 +71,19 @@ def test_anthropic_separate_counters_and_cache_ttls_are_normalized():
     assert request.input_tokens == 1150
     assert request.cached_input_tokens == 1000
     assert request.cache_creation_1h_input_tokens == 20
-    result = calculate(request)
+    result = calculate(request, catalog=billing_catalog)
     assert result.total_cost == pytest.approx(
         50 * 3e-6 + 10 * 1.5e-5 + 1000 * 3e-7 + 80 * 3.75e-6 + 20 * 6e-6
     )
 
 
-def test_anthropic_cache_tokens_also_trigger_context_tariff():
+def test_anthropic_cache_tokens_also_trigger_context_tariff(billing_catalog):
     request = from_anthropic_usage(
         "claude-sonnet-4-20250514",
         {"input_tokens": 1, "output_tokens": 1, "cache_read_input_tokens": 200000},
     )
     assert request.input_tokens == 200001
-    result = calculate(request)
+    result = calculate(request, catalog=billing_catalog)
     assert result.cached_input_cost == pytest.approx(200000 * 6e-7)
     assert result.output_cost == pytest.approx(2.25e-5)
 

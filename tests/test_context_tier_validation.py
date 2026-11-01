@@ -15,6 +15,8 @@ from tokenary.pricing import ModelPricing
         "cache_read_input_token_cost_above_200k_Tokens",
         "cache_creation_input_token_cost_above_1hr_above_200K_tokens",
         "input_cost_per_token_above_200k_tokens_typo",
+        "input_cost_per_token_above_272K_tokens_ultrafast",
+        "output_cost_per_token_above_272k_tokens_decision",
     ],
 )
 def test_unsupported_context_field_fails_instead_of_using_base_rate(field):
@@ -70,3 +72,53 @@ def test_ttl_service_tiers_and_unrelated_future_prices_are_distinct():
     assert prices.rate("cache_creation_input_token_cost_above_1hr", 200000) == 2
     assert prices.rate("cache_creation_input_token_cost_above_1hr", 200001) == 3
     assert prices.model_dump()["future_cost_per_widget"] == 4
+
+
+@pytest.mark.parametrize(
+    "suffix", ["priority", "batches", "flex", "ultrafast", "decisions"]
+)
+@pytest.mark.parametrize("tokens", [272000, 272001])
+def test_specialized_prices_roundtrip_without_changing_standard_costs(suffix, tokens):
+    rates = {
+        "input_cost_per_token": 1,
+        "output_cost_per_token": 2,
+        "cache_read_input_token_cost": 3,
+        "cache_creation_input_token_cost": 4,
+        "cache_creation_input_token_cost_above_12hr": 5,
+    }
+    data = {}
+    for field, rate in rates.items():
+        data[field] = rate
+        data[f"{field}_above_272k_tokens"] = rate * 2
+        data[f"{field}_{suffix}"] = 99
+        data[f"{field}_above_272k_tokens_{suffix}"] = 199
+    payload = build_catalog_payload({"fixture": data})
+    catalog = PricingCatalog.from_dict(payload)
+    assert (
+        catalog.models["fixture"].model_dump()[
+            f"cache_creation_input_token_cost_above_12hr_above_272k_tokens_{suffix}"
+        ]
+        == 199
+    )
+    for field, rate in rates.items():
+        assert catalog.models["fixture"].rate(field, tokens) == rate * (
+            2 if tokens > 272000 else 1
+        )
+    result = calculate(
+        model="fixture",
+        input_tokens=tokens,
+        output_tokens=10,
+        cached_input_tokens=20,
+        cache_creation_input_tokens=30,
+        catalog=catalog,
+    )
+    multiplier = 2 if tokens > 272000 else 1
+    assert result.total_cost == ((tokens - 50) + 10 * 2 + 20 * 3 + 30 * 4) * multiplier
+
+
+@pytest.mark.parametrize("suffix", ["ultrafast", "decisions"])
+def test_specialized_context_prices_still_require_valid_rates(suffix):
+    with pytest.raises(ValidationError, match="finite nonnegative"):
+        build_catalog_payload(
+            {"fixture": {f"input_cost_per_token_above_272k_tokens_{suffix}": -1}}
+        )

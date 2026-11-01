@@ -209,7 +209,7 @@ def main() -> None:
     tokenary.calculate(model="gpt-4o", input_tokens=1)
     tokenary.calculate(model="o1", input_tokens=1)
     assert len(reads) == 2
-    tokenary.calculate(model="claude-sonnet-4-20250514", input_tokens=1)
+    tokenary.calculate(model="claude-sonnet-4-6", input_tokens=1)
     assert len(reads) == 3 and reads[-1] != reads[-2]
     print(f"Installed wheel verified; source={source_bytes} B, subsets={subset_sizes}")
 
